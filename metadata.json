@@ -1,0 +1,8 @@
+{
+  "name": "Fresh Farm - તાજા શાકભાજી",
+  "description": "Fresh Farm - તાજા શાકભાજી ખરીદવા અને મેનેજ કરવા માટેની એપ. એડમીન પેનલ, ઇમેજ જનરેશન અને ચેટબોટ સાથે.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

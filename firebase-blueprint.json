@@ -1,0 +1,140 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information and delivery details",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "gender": { "type": "string", "enum": ["male", "female"] },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "age": { "type": "number" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "Vegetable": {
+      "title": "Vegetable/Product",
+      "description": "Information about items for sale",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "english_name": { "type": "string" },
+        "description": { "type": "string" },
+        "image_url": { "type": "string", "format": "uri" },
+        "category": { "type": "string", "enum": ["vegetable", "grocery", "namkeen"] },
+        "pricing_options": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "unit": { "type": "string" },
+              "price": { "type": "number" },
+              "costPrice": { "type": "number" },
+              "stock": { "type": "number" }
+            }
+          }
+        },
+        "in_stock": { "type": "boolean" },
+        "total_stock": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Order": {
+      "title": "Customer Order",
+      "description": "Details of a purchase",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "customer_phone": { "type": "string" },
+        "customer_address": { "type": "string" },
+        "items": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "vegId": { "type": "string" },
+              "name": { "type": "string" },
+              "englishName": { "type": "string" },
+              "price": { "type": "number" },
+              "quantity": { "type": "number" },
+              "unit": { "type": "string" }
+            }
+          }
+        },
+        "total_amount": { "type": "number" },
+        "subtotal": { "type": "number" },
+        "delivery_charge": { "type": "number" },
+        "discount_amount": { "type": "number" },
+        "promo_code": { "type": "string" },
+        "delivery_slot": { "type": "string" },
+        "invoice_number": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"] },
+        "payment_method": { "type": "string" },
+        "payment_status": { "type": "string" },
+        "cancel_reason": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Settings": {
+      "title": "App Settings",
+      "description": "Global configuration for the shop",
+      "type": "object",
+      "properties": {
+        "free_delivery_distance": { "type": "number" },
+        "free_delivery_threshold": { "type": "number" },
+        "delivery_charge": { "type": "number" },
+        "whatsapp_number": { "type": "string" },
+        "is_shop_open": { "type": "boolean" },
+        "warehouse_address": { "type": "string" },
+        "warehouse_lat": { "type": "number" },
+        "warehouse_lng": { "type": "number" },
+        "delivery_slots": { "type": "array" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PromoCode": {
+      "title": "Promo Code",
+      "description": "Discount codes for customers",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "type": { "type": "string", "enum": ["percentage", "fixed"] },
+        "value": { "type": "number" },
+        "min_order_amount": { "type": "number" },
+        "is_active": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "profiles/{userId}": {
+      "schema": "UserProfile",
+      "description": "Individual user profiles"
+    },
+    "vegetables/{vegId}": {
+      "schema": "Vegetable",
+      "description": "Product catalog"
+    },
+    "orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders"
+    },
+    "settings/global": {
+      "schema": "Settings",
+      "description": "Global application settings"
+    },
+    "promo_codes/{codeId}": {
+      "schema": "PromoCode",
+      "description": "Discount codes"
+    }
+  }
+}

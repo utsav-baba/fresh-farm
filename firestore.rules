@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: profiles
+    // Document ID: userId (UID from Auth)
+    // Fields:
+    //   - email: string (required)
+    //   - role: string (admin/user)
+    //   - first_name: string
+    //   - last_name: string
+    //   - gender: string (male/female)
+    //   - phone: string
+    //   - address: string
+    //   - age: number
+    //   - lat: number
+    //   - lng: number
+    //
+    // Collection: vegetables
+    // Fields: name, english_name, description, image_url, category, pricing_options (list), in_stock (bool)
+    //
+    // Collection: orders
+    // Fields: user_id, customer_name, customer_phone, customer_address, items (list), total_amount (number), status
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Quick check using token email or phone for list operations (Cost optimized)
+    function isTokenAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "patelb393@gmail.com" ||
+        request.auth.token.email == "peacockverse@gmail.com" ||
+        request.auth.token.phone_number == "+919876543210"
+      );
+    }
+    
+    // Thorough check for single document operations
+    function isDatabaseAdmin() {
+      return isAuthenticated() && (
+        isTokenAdmin() ||
+        (exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+    
+    function isAdmin() {
+      return isDatabaseAdmin();
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidProfile(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string &&
+             data.role in ['admin', 'user'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /profiles/{userId} {
+      allow get: if isOwner(userId) || isDatabaseAdmin();
+      allow list: if isTokenAdmin(); // Only admins can list all profiles
+      allow create: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data) && (request.resource.data.role == 'user' || isDatabaseAdmin());
+      allow update: if (isOwner(userId) && isValidProfile(request.resource.data) && request.resource.data.role == resource.data.role) || isDatabaseAdmin();
+    }
+
+    match /vegetables/{vegId} {
+      allow read: if true;
+      allow update: if isDatabaseAdmin() || (
+        isAuthenticated() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pricing_options', 'total_stock', 'totalStock', 'in_stock', 'updated_at'])
+      );
+      allow create, delete: if isDatabaseAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow get: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isDatabaseAdmin());
+      allow list: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isTokenAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.user_id == request.auth.uid || isDatabaseAdmin());
+      allow update: if isDatabaseAdmin();
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isDatabaseAdmin();
+    }
+    
+    match /promo_codes/{codeId} {
+      allow read: if true;
+      allow write: if isDatabaseAdmin();
+    }
+  }
+}
