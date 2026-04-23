@@ -20,7 +20,7 @@ const logout = () => signOut(auth);
 import { doc, getDocFromServer } from 'firebase/firestore';
 async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    await getDocFromServer(doc(db, 'settings', 'global'));
     console.log("Firestore connection successful.");
   } catch (error) {
     if(error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
