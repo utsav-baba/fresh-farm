@@ -76,6 +76,7 @@ service cloud.firestore {
       allow list: if isTokenAdmin(); // Only admins can list all profiles
       allow create: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data) && (request.resource.data.role == 'user' || isDatabaseAdmin());
       allow update: if (isOwner(userId) && isValidProfile(request.resource.data) && request.resource.data.role == resource.data.role) || isDatabaseAdmin();
+      allow delete: if isDatabaseAdmin();
     }
 
     match /vegetables/{vegId} {
