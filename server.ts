@@ -80,8 +80,10 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  const portNum = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
+
+  app.listen(portNum, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${portNum}`);
   });
 }
 

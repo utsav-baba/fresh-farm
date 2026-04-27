@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { auth, db } from './lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { 
   doc, 
   getDoc, 
@@ -188,6 +188,12 @@ export default function App() {
     };
 
     fetchInitialData();
+    
+    // Handle redirect result for iOS login
+    getRedirectResult(auth).catch((error) => {
+      console.error('Redirect result error:', error);
+      setAuthError('Login failed during redirect. Please try again.');
+    });
 
     // Minimum splash screen time
     const splashTimer = setTimeout(() => {

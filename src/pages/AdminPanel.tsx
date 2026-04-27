@@ -122,6 +122,29 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
   const [newStockAddition, setNewStockAddition] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [orderDeleteConfirm, setOrderDeleteConfirm] = useState(false);
+
+  const handleDeleteAllOrders = async () => {
+    if (!orderDeleteConfirm) {
+      setOrderDeleteConfirm(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const ordersSnap = await getDocs(collection(db, 'orders'));
+      const deletePromises = ordersSnap.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      setSuccess('બધા જ ઓર્ડર સફળતાપૂર્વક કાઢી નાખવામાં આવ્યા છે!');
+      setOrderDeleteConfirm(false);
+    } catch (err: any) {
+      console.error('Error deleting all orders:', err);
+      setError('ઓર્ડર કાઢી નાખવામાં ભૂલ થઈ.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (error || success) {
       const timer = setTimeout(() => {
@@ -2650,6 +2673,26 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                   <Download className="h-4 w-4" />
                   ઓર્ડર લિસ્ટ ડાઉનલોડ કરો
                 </button>
+                <button
+                  onClick={handleDeleteAllOrders}
+                  disabled={loading}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-md whitespace-nowrap ${
+                    orderDeleteConfirm 
+                      ? 'bg-red-600 text-white hover:bg-red-700 animate-pulse' 
+                      : 'bg-white text-red-600 border border-red-100 hover:bg-red-50'
+                  }`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {orderDeleteConfirm ? 'ચોક્કસ? અહીં ફરી ક્લિક કરો' : 'બધા ઓર્ડર કાઢી નાખો'}
+                </button>
+                {orderDeleteConfirm && (
+                  <button 
+                    onClick={() => setOrderDeleteConfirm(false)}
+                    className="p-2 bg-slate-100 text-slate-400 rounded-xl hover:text-slate-600 transition-all"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
             

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
 import { initializeFirestore } from "firebase/firestore";
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -13,7 +13,16 @@ const db = initializeFirestore(app, {
 
 const googleProvider = new GoogleAuthProvider();
 
-const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+const signInWithGoogle = () => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // Detection for iPadOS 13+
+  
+  if (isIOS) {
+    return signInWithRedirect(auth, googleProvider);
+  } else {
+    return signInWithPopup(auth, googleProvider);
+  }
+};
 const logout = () => signOut(auth);
 
 // CRITICAL CONSTRAINT: Test connection on boot

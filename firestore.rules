@@ -92,7 +92,7 @@ service cloud.firestore {
       allow get: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isDatabaseAdmin());
       allow list: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isTokenAdmin());
       allow create: if isAuthenticated() && (request.resource.data.user_id == request.auth.uid || isDatabaseAdmin());
-      allow update: if isDatabaseAdmin();
+      allow update, delete: if isDatabaseAdmin();
     }
 
     match /settings/{docId} {
