@@ -178,7 +178,9 @@ export function MyOrders({ profile, language, t }: { profile: UserProfile | null
                           {idx + 1}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-farm-g1 gu">{item.name}</p>
+                          <p className={`text-xs font-bold text-farm-g1 ${language === 'gu' ? 'gu' : ''}`}>
+                            {language === 'gu' ? (item.name_gu || item.name) : language === 'hi' ? (item.name_hi || item.name) : (item.name_en || item.name)}
+                          </p>
                           <p className="text-[9px] text-farm-muted font-bold uppercase tracking-widest">{item.quantity} × {item.unit}</p>
                         </div>
                       </div>

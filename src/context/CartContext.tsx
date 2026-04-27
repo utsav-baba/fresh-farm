@@ -29,7 +29,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, {
         id: veg.id,
         name: veg.name,
-        englishName: veg.englishName,
+        name_gu: veg.name_gu || veg.name,
+        name_hi: veg.name_hi,
+        name_en: veg.name_en || veg.englishName,
+        englishName: veg.name_en || veg.englishName,
         imageUrl: veg.imageUrl,
         selectedUnit: option.unit,
         selectedPrice: (option.discountPrice && option.discountPrice > 0 && option.discountPrice < option.price) ? option.discountPrice : option.price,

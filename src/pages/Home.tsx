@@ -72,8 +72,14 @@ export function Home({
           setVegetables(data.map(v => ({
             id: v.id,
             name: v.name,
-            englishName: v.english_name || v.englishName,
+            name_gu: v.name_gu || v.name,
+            name_hi: v.name_hi,
+            name_en: v.name_en || v.english_name || v.englishName,
+            englishName: v.name_en || v.english_name || v.englishName,
             description: v.description,
+            description_gu: v.description_gu || v.description,
+            description_hi: v.description_hi,
+            description_en: v.description_en,
             imageUrl: v.image_url || v.imageUrl,
             category: v.category || 'vegetable',
             pricingOptions: (v.pricing_options || v.pricingOptions || []).map((opt: any) => ({
@@ -192,12 +198,12 @@ export function Home({
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 bg-farm-s1 border border-farm-s2/20 px-3 py-1 rounded-full text-[9px] font-bold tracking-[0.2em] text-farm-g1 mb-4 uppercase animate-in fade-in slide-in-from-left duration-700 shadow-sm">
              <Star className="h-2.5 w-2.5 fill-current" />
-             GUJARAT'S FINEST
+             {t.gujaratFinest}
           </div>
           
           <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom duration-700 delay-100">
-            {language === 'gu' ? 'તાજા' : language === 'hi' ? 'તાજી' : 'Fresh'} <span className="text-farm-s2"> {language === 'gu' ? 'શાકભાજી' : language === 'hi' ? 'સબ્ઝિયાં' : 'Vegetables'}</span><br />
-            <span className="text-2xl sm:text-3xl font-bold opacity-90 tracking-tight">{language === 'gu' ? 'સીધા તમારા ઘરે!' : language === 'hi' ? 'સીધે આપકે ઘર!' : 'Directly to you!'}</span>
+            {language === 'gu' ? 'તાજા' : language === 'hi' ? 'ताजी' : 'Fresh'} <span className="text-farm-s2"> {language === 'gu' ? 'શાકભાજી' : language === 'hi' ? 'सब्जियां' : 'Vegetables'}</span><br />
+            <span className="text-2xl sm:text-3xl font-bold opacity-90 tracking-tight">{language === 'gu' ? 'સીધા તમારા ઘરે!' : language === 'hi' ? 'सीधे आपके घर!' : 'Directly to you!'}</span>
           </h1>
           
           <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom duration-700 delay-200">
@@ -205,12 +211,12 @@ export function Home({
               <>
                 <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl text-[10px] font-black border border-white/20 whitespace-nowrap">
                   <Truck className="h-3 w-3 text-farm-s2" />
-                  {settings.freeDeliveryDistance}KM FREE DELIVERY
+                  {t.marqueeFreeTill.replace('{{distance}}', (settings.freeDeliveryDistance || 0).toString())}
                 </div>
                 {settings.freeDeliveryThreshold > 0 && (
                   <div className="inline-flex items-center gap-1.5 bg-farm-s1 text-farm-g1 px-4 py-2 rounded-xl text-[10px] font-black shadow-lg animate-bounce border-2 border-farm-s2/50">
                     <ShoppingBag className="h-3 w-3" />
-                    {formatINR(settings.freeDeliveryThreshold)}+ FREE DELIVERY
+                    {t.marqueeFreeAbove.replace('{{threshold}}', formatINR(settings.freeDeliveryThreshold))}
                   </div>
                 )}
               </>
@@ -223,19 +229,19 @@ export function Home({
       <div className="flex gap-2 sm:gap-4 overflow-x-auto no-scrollbar pb-1">
         <div className="flex-1 min-w-[90px] bg-white p-3 rounded-xl border border-farm-border shadow-sm text-center">
           <div className="text-lg font-bold text-farm-g1 leading-none mb-1">500+</div>
-          <div className="text-[8px] font-bold text-farm-muted uppercase tracking-widest leading-none">Farmers</div>
+          <div className="text-[8px] font-bold text-farm-muted uppercase tracking-widest leading-none">{t.statFarmers}</div>
         </div>
         <div className="flex-1 min-w-[90px] bg-white p-3 rounded-xl border border-farm-border shadow-sm text-center">
           <div className="text-lg font-bold text-farm-g1 leading-none mb-1">4.9★</div>
-          <div className="text-[8px] font-bold text-farm-muted uppercase tracking-widest leading-none">Rating</div>
+          <div className="text-[8px] font-bold text-farm-muted uppercase tracking-widest leading-none">{t.statRating}</div>
         </div>
         <div className="flex-1 min-w-[90px] bg-white p-3 rounded-xl border border-farm-border shadow-sm text-center">
           <div className="text-lg font-bold text-farm-g1 leading-none mb-1">2K+</div>
-          <div className="text-[8px] font-bold text-farm-muted uppercase tracking-widest leading-none">Orders</div>
+          <div className="text-[8px] font-bold text-farm-muted uppercase tracking-widest leading-none">{t.statOrders}</div>
         </div>
         <div className="flex-1 min-w-[90px] bg-white p-3 rounded-xl border border-farm-border shadow-sm text-center">
           <div className="text-lg font-bold text-farm-g1 leading-none mb-1">1hr</div>
-          <div className="text-[8px] font-bold text-farm-muted uppercase tracking-widest leading-none">Delivery</div>
+          <div className="text-[8px] font-bold text-farm-muted uppercase tracking-widest leading-none">{t.statDelivery}</div>
         </div>
       </div>
 
@@ -364,7 +370,9 @@ export function Home({
 
               <div className="p-4 pt-0 flex-1 flex flex-col">
                 <div className="mb-3">
-                  <h3 className={`text-sm font-black gu leading-tight ${(!veg.inStock || (veg.totalStock || 0) <= 0) ? 'text-slate-400' : 'text-farm-g1'}`}>{veg.name}</h3>
+                  <h3 className={`text-sm font-black leading-tight ${language === 'gu' ? 'gu' : ''} ${(!veg.inStock || (veg.totalStock || 0) <= 0) ? 'text-slate-400' : 'text-farm-g1'}`}>
+                    {language === 'gu' ? (veg.name_gu || veg.name) : language === 'hi' ? (veg.name_hi || veg.name) : (veg.name_en || veg.englishName || veg.name)}
+                  </h3>
                   {veg.englishName && <p className="text-[9px] text-farm-muted font-bold uppercase tracking-[0.1em]">{veg.englishName}</p>}
                 </div>
                 
@@ -504,8 +512,12 @@ function ProductDetailModal({ veg, onClose, addToCart, updateQuantity, cart, get
                  <span className="bg-farm-g1/5 text-farm-g1 text-[10px] font-black px-3 py-1 rounded-full border border-farm-border">🌱 ORGANIC</span>
                  <span className="bg-farm-g1/5 text-farm-g1 text-[10px] font-black px-3 py-1 rounded-full border border-farm-border">✨ FARM FRESH</span>
               </div>
-              <h2 className="text-3xl font-black text-farm-g1 font-syne mb-1 italic">{veg.name}</h2>
-              <p className="text-farm-muted font-bold gu text-lg mb-4">{veg.description || 'તાજા અને પૌષ્ટિક શાકભાજી.'}</p>
+              <h2 className={`text-3xl font-black text-farm-g1 font-syne mb-1 italic ${language === 'gu' ? 'gu' : ''}`}>
+                {language === 'gu' ? (veg.name_gu || veg.name) : language === 'hi' ? (veg.name_hi || veg.name) : (veg.name_en || veg.englishName || veg.name)}
+              </h2>
+              <p className={`text-farm-muted font-bold text-lg mb-4 ${language === 'gu' ? 'gu' : ''}`}>
+                {language === 'gu' ? (veg.description_gu || veg.description) : language === 'hi' ? (veg.description_hi || veg.description) : (veg.description_en || veg.description)}
+              </p>
            </div>
 
            <div className="space-y-4">

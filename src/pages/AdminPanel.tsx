@@ -510,8 +510,14 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
       // Prepare data for Firestore
       const dataToSave: any = {
         name: formData.name || '',
-        english_name: formData.englishName || '',
+        name_gu: formData.name || '',
+        name_hi: formData.name_hi || '',
+        name_en: formData.name_en || formData.englishName || '',
+        english_name: formData.name_en || formData.englishName || '',
         description: formData.description || '',
+        description_gu: formData.description_gu || formData.description || '',
+        description_hi: formData.description_hi || '',
+        description_en: formData.description_en || '',
         image_url: finalImageUrl || '',
         category: formData.category || 'vegetable',
         in_stock: formData.inStock !== undefined ? formData.inStock : true,
@@ -1066,8 +1072,14 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
     setNewStockAddition('');
     setFormData({
       name: '',
+      name_gu: '',
+      name_hi: '',
+      name_en: '',
       englishName: '',
       description: '',
+      description_gu: '',
+      description_hi: '',
+      description_en: '',
       imageUrl: '',
       category: 'vegetable',
       inStock: true,
@@ -1346,27 +1358,70 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">નામ (ગુજરાતી)</label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="દા.ત. બટાકા"
-                      />
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-600 mb-1">નામ PRIMARY (GUJARATI)</label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value, name_gu: e.target.value })}
+                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 gu"
+                          placeholder="દા.ત. બટાકા"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-600 mb-1">HINDI NAME</label>
+                        <input
+                          type="text"
+                          value={formData.name_hi || ''}
+                          onChange={(e) => setFormData({ ...formData, name_hi: e.target.value })}
+                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="हिन्दी नाम"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-600 mb-1">ENGLISH NAME</label>
+                        <input
+                          type="text"
+                          value={formData.name_en || formData.englishName || ''}
+                          onChange={(e) => setFormData({ ...formData, name_en: e.target.value, englishName: e.target.value })}
+                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="English Name"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">Name (English)</label>
-                      <input
-                        type="text"
-                        value={formData.englishName}
-                        onChange={(e) => setFormData({ ...formData, englishName: e.target.value })}
-                        className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="e.g. Potato"
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                       <div>
+                        <label className="block text-[10px] font-black text-slate-600 mb-1">GUJARATI DESCR.</label>
+                        <textarea
+                          value={formData.description_gu || formData.description || ''}
+                          onChange={(e) => setFormData({ ...formData, description_gu: e.target.value, description: e.target.value })}
+                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-xs gu"
+                          placeholder="ગુજરાતી વર્ણન"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-600 mb-1">HINDI DESCR.</label>
+                        <textarea
+                          value={formData.description_hi || ''}
+                          onChange={(e) => setFormData({ ...formData, description_hi: e.target.value })}
+                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-xs"
+                          placeholder="हिन्दी वर्णन"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-600 mb-1">ENGLISH DESCR.</label>
+                        <textarea
+                          value={formData.description_en || ''}
+                          onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
+                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-xs"
+                          placeholder="English Description"
+                        />
+                      </div>
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-slate-600 mb-1">વિભાગ (Category)</label>
                       <select
@@ -1755,8 +1810,14 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                             setFormData({
                               ...veg,
                               name: veg.name || '',
-                              englishName: veg.englishName || '',
+                              name_gu: veg.name_gu || veg.name || '',
+                              name_hi: veg.name_hi || '',
+                              name_en: veg.name_en || veg.englishName || '',
+                              englishName: veg.name_en || veg.englishName || '',
                               description: veg.description || '',
+                              description_gu: veg.description_gu || veg.description || '',
+                              description_hi: veg.description_hi || '',
+                              description_en: veg.description_en || '',
                               inStock: veg.inStock !== undefined ? veg.inStock : true,
                               totalStock: veg.totalStock || 0,
                               pricingOptions: veg.pricingOptions && veg.pricingOptions.length > 0 

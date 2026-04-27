@@ -118,15 +118,21 @@ export default function App() {
         setVegetables(data.map(v => ({
           id: v.id,
           name: v.name,
-          englishName: (v as any).english_name || (v as any).englishName,
-          description: (v as any).description,
-          imageUrl: (v as any).image_url || (v as any).imageUrl,
-          category: (v as any).category || 'vegetable',
-          pricingOptions: (v as any).pricing_options || (v as any).pricingOptions,
+          name_gu: v.name_gu || v.name,
+          name_hi: v.name_hi,
+          name_en: v.name_en || v.english_name || v.englishName,
+          englishName: v.name_en || v.english_name || v.englishName,
+          description: v.description,
+          description_gu: v.description_gu || v.description,
+          description_hi: v.description_hi,
+          description_en: v.description_en,
+          imageUrl: v.image_url || v.imageUrl,
+          category: v.category || 'vegetable',
+          pricingOptions: v.pricing_options || v.pricingOptions,
           totalStock: (v as any).total_stock ?? (v as any).totalStock ?? (( (v.pricing_options || v.pricingOptions || []).length > 0) ? ((v.pricing_options || v.pricingOptions)[0].stock || 0) : 0),
           inStock: (v as any).in_stock ?? (v as any).inStock ?? true,
-          createdAt: (v as any).created_at || (v as any).createdAt,
-          updatedAt: (v as any).updated_at || (v as any).updatedAt
+          createdAt: v.created_at || v.createdAt,
+          updatedAt: v.updated_at || v.updatedAt
         } as Vegetable)));
       }
     } catch (err) {
@@ -630,14 +636,27 @@ function AppContent({
             }
           }} 
           t={t} 
+          language={language}
         />
       )}
       
       {/* Notice Strip / Offer Strip */}
       <div className="bg-farm-g1 text-farm-s2 text-[10px] font-bold py-1.5 relative z-50 overflow-hidden border-b border-farm-g3/20">
         <div className="flex animate-marquee whitespace-nowrap">
-          <span className="px-4">🌿 {formatINR(settings?.freeDeliveryThreshold || 249)} ઉપર FREE DELIVERY &nbsp;·&nbsp; 🚀 {settings?.freeDeliveryDistance || 10} KM સુધી FREE DELIVERY &nbsp;·&nbsp; 🥕 રોજ સવારે તાજી ડિલિવરી &nbsp;·&nbsp; 💚 Gujarat's Freshest &nbsp;·&nbsp; ⭐ 4.9 Rating &nbsp;·&nbsp;</span>
-          <span className="px-4">🌿 {formatINR(settings?.freeDeliveryThreshold || 249)} ઉપર FREE DELIVERY &nbsp;·&nbsp; 🚀 {settings?.freeDeliveryDistance || 10} KM સુધી FREE DELIVERY &nbsp;·&nbsp; 🥕 રોજ સવારે તાજી ડિલિવરી &nbsp;·&nbsp; 💚 Gujarat's Freshest &nbsp;·&nbsp; ⭐ 4.9 Rating &nbsp;·&nbsp;</span>
+          <span className="px-4">
+            {t.marqueeFreeAbove.replace('{{threshold}}', formatINR(settings?.freeDeliveryThreshold || 249))} &nbsp;·&nbsp; 
+            {t.marqueeFreeTill.replace('{{distance}}', (settings?.freeDeliveryDistance || 10).toString())} &nbsp;·&nbsp; 
+            {t.marqueeFreshEveryMorning} &nbsp;·&nbsp; 
+            {t.marqueeGujFreshest} &nbsp;·&nbsp; 
+            {t.marqueeRating} &nbsp;·&nbsp;
+          </span>
+          <span className="px-4">
+            {t.marqueeFreeAbove.replace('{{threshold}}', formatINR(settings?.freeDeliveryThreshold || 249))} &nbsp;·&nbsp; 
+            {t.marqueeFreeTill.replace('{{distance}}', (settings?.freeDeliveryDistance || 10).toString())} &nbsp;·&nbsp; 
+            {t.marqueeFreshEveryMorning} &nbsp;·&nbsp; 
+            {t.marqueeGujFreshest} &nbsp;·&nbsp; 
+            {t.marqueeRating} &nbsp;·&nbsp;
+          </span>
         </div>
       </div>
 
@@ -647,7 +666,9 @@ function AppContent({
             <div className="bg-farm-g2 p-1.5 rounded-xl border border-farm-g3/20 transition-transform group-hover:rotate-6">
               <ShoppingBasket className="h-5.5 w-5.5 text-farm-s2" />
             </div>
-            <span className="text-lg font-bold text-white tracking-tight group-hover:text-farm-s2 transition-colors">Fresh <span className="text-farm-s2">Farm</span></span>
+            <span className="text-lg font-bold text-white tracking-tight group-hover:text-farm-s2 transition-colors">
+              {t.freshFarm.split(' ')[0]} <span className="text-farm-s2">{t.freshFarm.split(' ')[1] || ''}</span>
+            </span>
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-4">
@@ -726,21 +747,21 @@ function AppContent({
 
       {/* Bottom Nav - Mobile Style */}
       <div className="fixed bottom-0 left-0 right-0 bg-farm-g1/98 backdrop-blur-xl border-t border-white/5 px-4 py-2.5 flex justify-around items-center z-[100] sm:hidden">
-        <Link to="/" className="flex flex-col items-center gap-1 text-[10px] font-bold text-farm-s2">
+        <Link to="/" className={`flex flex-col items-center gap-1 text-[10px] font-bold transition-colors ${location.pathname === '/' ? 'text-farm-s2' : 'text-white/50'}`}>
           <ShoppingBasket className="h-6 w-6" />
-          <span>HOME</span>
+          <span>{t.navHome}</span>
         </Link>
-        <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center gap-1 text-[10px] font-bold text-white/50">
+        <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center gap-1 text-[10px] font-bold text-white/50 hover:text-farm-s2">
           <ShoppingCart className="h-6 w-6" />
-          <span>CART</span>
+          <span>{t.navCart}</span>
         </button>
-        <Link to="/my-orders" className="flex flex-col items-center gap-1 text-[10px] font-bold text-white/50">
+        <Link to="/my-orders" className={`flex flex-col items-center gap-1 text-[10px] font-bold transition-colors ${location.pathname === '/my-orders' ? 'text-farm-s2' : 'text-white/50'}`}>
           <Package className="h-6 w-6" />
-          <span>ORDERS</span>
+          <span>{t.navOrders}</span>
         </Link>
-        <Link to="/profile" className="flex flex-col items-center gap-1 text-[10px] font-bold text-white/50">
+        <Link to="/profile" className={`flex flex-col items-center gap-1 text-[10px] font-bold transition-colors ${location.pathname === '/profile' ? 'text-farm-s2' : 'text-white/50'}`}>
           <UserIcon className="h-6 w-6" />
-          <span>PROFILE</span>
+          <span>{t.navProfile}</span>
         </Link>
       </div>
 
@@ -878,7 +899,7 @@ function UserProfilePage({ profile, user, logout, onEditProfile, onChangeLanguag
   );
 }
 
-function ProfileSetupModal({ profile, onSave, t }: { profile: UserProfile, onSave: (p: UserProfile) => void, t: any }) {
+function ProfileSetupModal({ profile, onSave, t, language }: { profile: UserProfile, onSave: (p: UserProfile) => void, t: any, language: string }) {
   const [formData, setFormData] = useState({
     firstName: profile.firstName || '',
     lastName: profile.lastName || '',
@@ -978,7 +999,7 @@ function ProfileSetupModal({ profile, onSave, t }: { profile: UserProfile, onSav
                 value={formData.firstName}
                 onChange={e => setFormData({ ...formData, firstName: e.target.value })}
                 className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 gu"
-                placeholder="દા.ત. રમેશ"
+                placeholder={t.firstName === "નામ" ? "દા.ત. રમેશ" : t.firstName === "नाम" ? "जैसे: रमेश" : "e.g. Ramesh"}
               />
             </div>
             <div className="space-y-1.5">
@@ -989,7 +1010,7 @@ function ProfileSetupModal({ profile, onSave, t }: { profile: UserProfile, onSav
                 value={formData.lastName}
                 onChange={e => setFormData({ ...formData, lastName: e.target.value })}
                 className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 gu"
-                placeholder="દા.ત. પટેલ"
+                placeholder={t.lastName === "અટક" ? "દા.ત. પટેલ" : t.lastName === "सरनेम" ? "जैसे: पटेल" : "e.g. Patel"}
               />
             </div>
           </div>
@@ -1045,7 +1066,7 @@ function ProfileSetupModal({ profile, onSave, t }: { profile: UserProfile, onSav
               value={formData.address}
               onChange={e => setFormData({ ...formData, address: e.target.value })}
               className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-[24px] outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 min-h-[100px] gu"
-              placeholder="તમારું પૂરું સરનામું લખો..."
+              placeholder={t.addressPlaceholder}
             />
           </div>
 
@@ -1061,7 +1082,7 @@ function ProfileSetupModal({ profile, onSave, t }: { profile: UserProfile, onSav
                 disabled={locating}
                 className="text-[11px] font-black text-farm-g1 underline underline-offset-4 uppercase tracking-[0.1em] hover:text-farm-g2 flex items-center gap-1 transition-colors disabled:opacity-50"
               >
-                {locating ? 'LOCATING...' : t.autoLocate}
+                {locating ? (language === 'gu' ? 'મેળવી રહ્યા છીએ...' : language === 'hi' ? 'खोज रहे हैं...' : 'LOCATING...') : t.autoLocate}
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">

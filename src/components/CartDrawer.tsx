@@ -320,6 +320,9 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
       const orderItems: OrderItem[] = cart.map(item => ({
         vegId: item.id || '',
         name: item.name,
+        name_gu: item.name_gu,
+        name_hi: item.name_hi,
+        name_en: item.name_en,
         englishName: item.englishName || '',
         price: item.selectedPrice,
         quantity: item.quantity,
@@ -603,7 +606,9 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
                       </div>
                       <div className="flex-1">
                         <div className="mb-2">
-                          <h3 className="font-black text-farm-g1 leading-tight gu text-sm">{item.name}</h3>
+                          <h3 className={`font-black text-farm-g1 leading-tight text-sm ${language === 'gu' ? 'gu' : ''}`}>
+                            {language === 'gu' ? (item.name_gu || item.name) : language === 'hi' ? (item.name_hi || item.name) : (item.name_en || item.englishName || item.name)}
+                          </h3>
                           {item.englishName && <span className="text-[9px] text-farm-muted font-bold uppercase tracking-widest">{item.englishName}</span>}
                         </div>
                         <div className="flex flex-col">
@@ -742,12 +747,12 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
                     <div className="flex gap-4 items-center bg-white/50 p-4 rounded-xl border border-farm-border">
                        <div className="flex-1">
                           <p className="text-[10px] font-black text-farm-g2 uppercase tracking-widest mb-1">DISTANCE STATUS</p>
-                          <p className="text-xs font-bold text-farm-g1 gu">
-                            {isCalculatingDist ? (language === 'gu' ? 'અંતર ગણી રહ્યા છીએ...' : 'Calculating distance...') :
-                             (!settings?.warehouseLat ? (language === 'gu' ? 'વેરહાઉસ લોકેશન સેટ નથી' : 'Warehouse loc not set') : 
-                             (customerInfo.distance >= 0) ? `${customerInfo.distance} ${language === 'gu' ? 'કિમી દૂર' : 'km away'}` : 
-                             (customerInfo.lat === 0 && customerInfo.address.length > 5) ? (language === 'gu' ? 'લોકેશન ટ્રેક કરી રહ્યા છીએ...' : 'Locating...') :
-                             (language === 'gu' ? 'લોકેશન સેટ નથી' : 'Location not set'))}
+                          <p className="text-xs font-bold text-farm-g1">
+                            {isCalculatingDist ? (language === 'gu' ? 'અંતર ગણી રહ્યા છીએ...' : language === 'hi' ? 'दूरी की गणना की जा रही है...' : 'Calculating distance...') :
+                             (!settings?.warehouseLat ? (language === 'gu' ? 'વેરહાઉસ લોકેશન સેટ નથી' : language === 'hi' ? 'गोदाम का स्थान निर्धारित नहीं है' : 'Warehouse loc not set') : 
+                             (customerInfo.distance >= 0) ? `${customerInfo.distance} ${language === 'gu' ? 'કિમી દૂર' : language === 'hi' ? 'किमी दूर' : 'km away'}` : 
+                             (customerInfo.lat === 0 && customerInfo.address.length > 5) ? (language === 'gu' ? 'લોકેશન ટ્રેક કરી રહ્યા છીએ...' : language === 'hi' ? 'स्थान खोज रहे हैं...' : 'Locating...') :
+                             (language === 'gu' ? 'લોકેશન સેટ નથી' : language === 'hi' ? 'स्थान निर्धारित नहीं है' : 'Location not set'))}
                           </p>
                        </div>
                        {(customerInfo.lat !== 0 || customerInfo.lng !== 0) && (

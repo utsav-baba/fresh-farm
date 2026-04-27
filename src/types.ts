@@ -9,8 +9,14 @@ export interface PricingOption {
 export interface Vegetable {
   id?: string;
   name: string;
+  name_gu?: string;
+  name_hi?: string;
+  name_en?: string;
   englishName?: string;
   description: string;
+  description_gu?: string;
+  description_hi?: string;
+  description_en?: string;
   imageUrl: string;
   category: 'vegetable' | 'grocery' | 'namkeen';
   pricingOptions: PricingOption[];
@@ -67,6 +73,9 @@ export interface UserProfile {
 export interface OrderItem {
   vegId: string;
   name: string;
+  name_gu?: string;
+  name_hi?: string;
+  name_en?: string;
   englishName?: string;
   price: number;
   costPrice?: number;
@@ -100,6 +109,9 @@ export interface Order {
 export interface CartItem {
   id?: string;
   name: string;
+  name_gu?: string;
+  name_hi?: string;
+  name_en?: string;
   englishName?: string;
   imageUrl: string;
   selectedUnit: string;
