@@ -76,10 +76,7 @@ service cloud.firestore {
 
     match /profiles/{userId} {
       allow get: if isOwner(userId) || isDatabaseAdmin();
-      allow list: if isTokenAdmin() || (
-        request.query.limit == 1 && 
-        resource.data.phone != null
-      );
+      allow list: if (request.query.limit == 1 && resource.data.phone != null) || isTokenAdmin();
       allow create: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data) && (request.resource.data.role == 'user' || isDatabaseAdmin());
       allow update: if (isOwner(userId) && isValidProfile(request.resource.data) && request.resource.data.role == resource.data.role) || isDatabaseAdmin();
       allow delete: if isDatabaseAdmin();

@@ -582,7 +582,7 @@ function AppContent({
   };
 
   if (!user || (user && !profile?.firstName)) {
-    if (loginStep === 'phone' && !user) {
+    if (loginStep === 'phone') {
       return (
         <div className="min-h-screen bg-farm-g1 flex items-center justify-center p-6 relative overflow-hidden">
           <div className="absolute top-[-100px] right-[-100px] w-[400px] h-[400px] rounded-full bg-farm-g4 opacity-[0.05]" />
@@ -637,7 +637,7 @@ function AppContent({
       );
     }
 
-    if (loginStep === 'password' && !user) {
+    if (loginStep === 'password') {
       return (
         <div className="min-h-screen bg-farm-g1 flex items-center justify-center p-6 relative overflow-hidden">
           <div className="absolute top-[-100px] right-[-100px] w-[400px] h-[400px] rounded-full bg-farm-g4 opacity-[0.05]" />
