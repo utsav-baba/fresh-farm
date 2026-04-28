@@ -1,5 +1,15 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  signOut, 
+  signInAnonymously,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  fetchSignInMethodsForEmail
+} from 'firebase/auth';
 import { initializeFirestore } from "firebase/firestore";
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -23,6 +33,44 @@ const signInWithGoogle = () => {
     return signInWithPopup(auth, googleProvider);
   }
 };
+
+const loginAnonymously = () => signInAnonymously(auth);
+
+const registerWithPhone = (phone: string, password: string) => {
+  const email = `${phone}@farm.com`;
+  return createUserWithEmailAndPassword(auth, email, password);
+};
+
+const loginWithPhone = (phone: string, password: string) => {
+  const email = `${phone}@farm.com`;
+  return signInWithEmailAndPassword(auth, email, password);
+};
+
+const checkUserExists = async (phone: string) => {
+  const email = `${phone}@farm.com`;
+  try {
+    console.log("Checking existence for:", email);
+    const methods = await fetchSignInMethodsForEmail(auth, email);
+    console.log("Found methods:", methods);
+    if (methods.length > 0) return true;
+
+    // Fallback: Check Firestore profiles collection
+    const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
+    const q = query(
+      collection(db, 'profiles'), 
+      where('phone', '==', phone),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (err: any) {
+    console.error("Existence check error", err);
+    // Handle specific codes if needed
+    if (err.code === 'auth/invalid-email') return false;
+    return false;
+  }
+};
+
 const logout = () => signOut(auth);
 
 // CRITICAL CONSTRAINT: Test connection on boot
@@ -41,4 +89,4 @@ async function testConnection() {
 }
 testConnection();
 
-export { auth, db, googleProvider, signInWithGoogle, logout };
+export { auth, db, googleProvider, signInWithGoogle, loginAnonymously, registerWithPhone, loginWithPhone, checkUserExists, logout };

@@ -40,6 +40,9 @@ service cloud.firestore {
       return isAuthenticated() && (
         request.auth.token.email == "patelb393@gmail.com" ||
         request.auth.token.email == "peacockverse@gmail.com" ||
+        request.auth.token.email == "7043439580@farm.com" ||
+        request.auth.token.email == "9723786200@farm.com" ||
+        request.auth.token.email == "9876543210@farm.com" ||
         request.auth.token.phone_number == "+919876543210"
       );
     }
@@ -73,7 +76,10 @@ service cloud.firestore {
 
     match /profiles/{userId} {
       allow get: if isOwner(userId) || isDatabaseAdmin();
-      allow list: if isTokenAdmin(); // Only admins can list all profiles
+      allow list: if isTokenAdmin() || (
+        request.query.limit == 1 && 
+        resource.data.phone != null
+      );
       allow create: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data) && (request.resource.data.role == 'user' || isDatabaseAdmin());
       allow update: if (isOwner(userId) && isValidProfile(request.resource.data) && request.resource.data.role == resource.data.role) || isDatabaseAdmin();
       allow delete: if isDatabaseAdmin();

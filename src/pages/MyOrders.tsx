@@ -192,18 +192,18 @@ export function MyOrders({ profile, language, t }: { profile: UserProfile | null
                 <div className="mt-5 pt-5 border-t border-dashed border-farm-border flex flex-col gap-3">
                   <div className="flex flex-col gap-1.5 text-right w-full">
                     <div className="flex justify-between text-[11px] font-bold text-farm-muted gu">
-                      <span>કુલ રકમ (Subtotal)</span>
+                      <span>{t.subtotal}</span>
                       <span>{formatINR(order.subtotal || order.totalAmount - (order.deliveryCharge || 0))}</span>
                     </div>
                     {order.deliveryCharge > 0 && (
                       <div className="flex justify-between text-[11px] font-bold text-slate-500 gu">
-                        <span>ડિલિવરી ચાર્જ (Delivery Charge)</span>
+                        <span>{t.deliveryCharge}</span>
                         <span>+ {formatINR(order.deliveryCharge)}</span>
                       </div>
                     )}
                     {order.discountAmount > 0 && (
                       <div className="flex justify-between text-[11px] font-bold text-green-600 gu">
-                        <span>પ્રોમો કોડ ડિસ્કાઉન્ટ (Discount)</span>
+                        <span>{t.discount}</span>
                         <span>- {formatINR(order.discountAmount)}</span>
                       </div>
                     )}

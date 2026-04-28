@@ -292,7 +292,96 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
     setLoading(true);
     setError(null);
     try {
-      // Validate Stock before placing order
+      // 1. FETCH LATEST SETTINGS TO BE CERTAIN
+      const settingsRef = doc(db, 'settings', 'global');
+      const settingsSnap = await getDoc(settingsRef);
+      let latestSettings = settings;
+      
+      if (settingsSnap.exists()) {
+        const d = settingsSnap.data();
+        latestSettings = {
+          freeDeliveryDistance: d.free_delivery_distance || d.freeDeliveryDistance || 0,
+          freeDeliveryThreshold: d.free_delivery_threshold || d.freeDeliveryThreshold || 0,
+          deliveryCharge: d.delivery_charge || d.deliveryCharge || 0,
+          isShopOpen: d.is_shop_open ?? d.isShopOpen ?? true,
+          warehouseLat: d.warehouse_lat || d.warehouseLat,
+          warehouseLng: d.warehouse_lng || d.warehouseLng,
+          distanceAdjustment: d.distance_adjustment || d.distanceAdjustment || 1.0,
+          deliveryChargePerKm: d.delivery_charge_per_km || d.deliveryChargePerKm || 0,
+          deliverySlots: d.delivery_slots || d.deliverySlots || []
+        } as AppSettings;
+      }
+
+      if (latestSettings?.isShopOpen === false) {
+        setError(t.shopClosedOrderError);
+        setLoading(false);
+        return;
+      }
+
+      // 2. RE-VALIDATE DISTANCE BEFORE CHECKOUT
+      let freshDist = customerInfo.distance;
+      let freshLat = customerInfo.lat;
+      let freshLng = customerInfo.lng;
+
+      if (latestSettings && latestSettings.warehouseLat && latestSettings.warehouseLng) {
+        try {
+          if ("geolocation" in navigator) {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, { 
+                enableHighAccuracy: true, 
+                timeout: 5000, 
+                maximumAge: 0 // Force fresh location
+              });
+            });
+            
+            freshLat = position.coords.latitude;
+            freshLng = position.coords.longitude;
+            
+            const distResult = await getRoadDistance(
+              freshLat,
+              freshLng,
+              latestSettings.warehouseLat,
+              latestSettings.warehouseLng,
+              latestSettings.distanceAdjustment || 1.0
+            );
+            freshDist = Number(distResult.toFixed(2));
+
+            // Update state for UI consistency
+            setCustomerInfo(prev => ({ 
+              ...prev, 
+              lat: freshLat, 
+              lng: freshLng, 
+              distance: freshDist 
+            }));
+            
+            console.log(`Checkout: Location re-validated. Distance: ${freshDist} km`);
+          }
+        } catch (locErr) {
+          console.warn('Checkout: Could not re-validate location, using last known.', locErr);
+        }
+      }
+
+      // 3. CALCULATE FINAL TOTALS LOCALLY (to avoid stale state issues)
+      const threshold = latestSettings?.freeDeliveryThreshold || 0;
+      const freeDistLimit = latestSettings?.freeDeliveryDistance || 0;
+      const baseCharge = latestSettings?.deliveryCharge || 0;
+      const chargePerKm = latestSettings?.deliveryChargePerKm || 0;
+
+      const isFreeThreshold = threshold > 0 && totalPrice >= threshold;
+      const isFreeDist = freeDistLimit > 0 && freshDist >= 0 && freshDist <= freeDistLimit && (freshLat !== 0 || freshLng !== 0);
+      
+      const extraCharge = (freshDist > 0 && chargePerKm) ? (freshDist * chargePerKm) : 0;
+      const finalDeliveryCharge = (isFreeThreshold || isFreeDist) ? 0 : (baseCharge + extraCharge);
+      
+      const promoDiscount = appliedPromo ? (
+        appliedPromo.type === 'percentage' 
+          ? (totalPrice * appliedPromo.value) / 100 
+          : appliedPromo.value
+      ) : 0;
+
+      const orderTotal = totalPrice + finalDeliveryCharge - promoDiscount;
+
+      // 4. Validate Stock before placing order
       for (const item of cart) {
         if (!item.id) continue;
         const vegRef = doc(db, 'vegetables', item.id);
@@ -304,7 +393,6 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
           const multiplier = getUnitMultiplier(item.selectedUnit);
           const totalWeightNeeded = item.quantity * multiplier;
           
-          // Use total_stock as the primary source of truth, fallback to first pricing option stock
           const currentStock = veg.total_stock ?? veg.totalStock ?? ((pricingOptions.length > 0) ? (pricingOptions[0].stock || 0) : 0);
 
           if (currentStock < totalWeightNeeded) {
@@ -313,7 +401,7 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
         }
       }
 
-      if (isNaN(finalTotal) || isNaN(customerInfo.distance)) {
+      if (isNaN(orderTotal) || isNaN(freshDist)) {
         throw new Error(t.calculationError);
       }
 
@@ -329,7 +417,7 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
         unit: item.selectedUnit
       }));
 
-      // Generate a unique invoice number using timestamp to avoid permission issues with global queries
+      // Generate a unique invoice number using timestamp
       const nextInvoiceNumber = Date.now().toString().slice(-6);
       const ordersRef = collection(db, 'orders');
 
@@ -339,10 +427,10 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
         customer_phone: customerInfo.phone,
         customer_address: customerInfo.address,
         items: orderItems,
-        total_amount: finalTotal,
+        total_amount: orderTotal,
         subtotal: totalPrice,
-        delivery_charge: currentDeliveryCharge,
-        discount_amount: discountAmount || 0,
+        delivery_charge: finalDeliveryCharge,
+        discount_amount: promoDiscount || 0,
         promo_code: appliedPromo?.code || null,
         delivery_slot: selectedSlot || null,
         invoice_number: nextInvoiceNumber,
@@ -350,7 +438,11 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
         payment_method: paymentMethod || 'COD',
         payment_status: 'Pending',
         created_at: serverTimestamp(),
-        updated_at: serverTimestamp()
+        updated_at: serverTimestamp(),
+        // Store distance and coords used for reference
+        delivery_distance: freshDist,
+        delivery_lat: freshLat,
+        delivery_lng: freshLng
       });
 
       // Update Stock reliably

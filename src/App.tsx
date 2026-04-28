@@ -84,10 +84,12 @@ export default function App() {
   const [showLanguageSelection, setShowLanguageSelection] = useState(() => {
     return !localStorage.getItem('preferred_language');
   });
+  const [loginStep, setLoginStep] = useState<'phone' | 'password' | 'signup'>('phone');
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const t = translations[language];
 
-  const isProfileIncomplete = profile && (!profile.firstName || !profile.phone || !profile.address);
+  const isProfileIncomplete = user && profile && !profile.firstName && loginStep !== 'signup';
 
   useEffect(() => {
     // Test connection as required by instructions
@@ -257,21 +259,28 @@ export default function App() {
       if (firebaseUser) {
         setUser(firebaseUser);
         
-        // Sync with Firestore profiles (Prefer Firestore over Supabase now)
         try {
           const profileRef = doc(db, 'profiles', firebaseUser.uid);
           const profileSnap = await getDoc(profileRef);
           
-          const isAdmin = firebaseUser.email === 'patelb393@gmail.com' || firebaseUser.email === 'peacockverse@gmail.com' || firebaseUser.phoneNumber === '+919876543210';
+          const isAdmin = firebaseUser.email === 'patelb393@gmail.com' || 
+                         firebaseUser.email === 'peacockverse@gmail.com' ||
+                         firebaseUser.email === '7043439580@farm.com' || 
+                         firebaseUser.email === '9723786200@farm.com';
 
           if (profileSnap.exists()) {
             const profileData = profileSnap.data();
-            // Force admin role if criteria matches
-            if (isAdmin && profileData.role !== 'admin') {
-              await updateDoc(profileRef, { role: 'admin' });
-              profileData.role = 'admin';
-            }
             
+            // Auto-upgrade to admin role for these specific users
+            if (isAdmin && profileData.role !== 'admin') {
+              try {
+                const { updateDoc } = await import('firebase/firestore');
+                await updateDoc(profileRef, { role: 'admin' });
+                profileData.role = 'admin';
+              } catch (e) {
+                console.error("Failed to upgrade admin role:", e);
+              }
+            }
             setProfile({ 
               uid: firebaseUser.uid,
               email: profileData.email,
@@ -286,26 +295,14 @@ export default function App() {
               lng: profileData.lng,
               createdAt: profileData.created_at
             } as any);
-          } else {
-            // Create new profile in Firestore
-            const newProfile = {
-              email: firebaseUser.email || '',
-              role: isAdmin ? 'admin' : 'user',
-              created_at: serverTimestamp()
-            };
-            await setDoc(profileRef, newProfile);
-            setProfile({ 
-              uid: firebaseUser.uid,
-              ...newProfile,
-              createdAt: new Date().toISOString()
-            } as any);
           }
         } catch (error) {
-          handleFirestoreError(error, OperationType.GET, `profiles/${firebaseUser.uid}`);
+          console.error("Profile sync error", error);
         }
       } else {
         setUser(null);
         setProfile(null);
+        setLoginStep('phone');
       }
       setIsAuthReady(true);
       clearTimeout(timeout);
@@ -317,35 +314,42 @@ export default function App() {
     };
   }, []);
 
+  // Handle local profile for guests if Firebase Auth is not available
+  useEffect(() => {
+    if (isAuthReady && !user) {
+      const localProfile = localStorage.getItem('guest_profile');
+      if (localProfile) {
+        try {
+          const parsed = JSON.parse(localProfile);
+          setProfile({
+            uid: parsed.uid || 'guest_' + Math.random().toString(36).substr(2, 9),
+            ...parsed,
+            role: 'user'
+          } as any);
+        } catch (e) {
+          console.error("Error parsing local profile", e);
+        }
+      } else {
+        // If no local profile and no user, we'll create a skeleton for the modal to pick up
+        setProfile({
+          uid: 'guest_' + Math.random().toString(36).substr(2, 9),
+          firstName: '',
+          lastName: '',
+          phone: '',
+          address: '',
+          role: 'user'
+        } as any);
+      }
+    }
+  }, [isAuthReady, user]);
+
   const [loginInProgress, setLoginInProgress] = useState(false);
   const loginRef = useRef(false);
-  const [authError, setAuthError] = useState<string | null>(null);
 
-  const login = async () => {
-    if (loginInProgress || loginRef.current) return;
-    setIsAuthReady(false); // Reset auth ready to show splash if needed
-    setLoginInProgress(true);
-    loginRef.current = true;
-    setAuthError(null);
-    const { signInWithGoogle } = await import('./lib/firebase');
-    try {
-      await signInWithGoogle();
-    } catch (error: any) {
-      console.error('Login error:', error);
-      if (error.code === 'auth/cancelled-popup-request') {
-        setAuthError('Another login request is in progress. Please wait.');
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        setAuthError('Login window was closed. Please try again.');
-      } else if (error.code === 'auth/popup-blocked') {
-        setAuthError('Login popup was blocked by your browser. Please allow popups for this site.');
-      } else {
-        setAuthError('Login failed. Please try again.');
-      }
-    } finally {
-      setLoginInProgress(false);
-      loginRef.current = false;
-      setIsAuthReady(true);
-    }
+  const login = () => {
+    setLoginStep('phone');
+    // For mobile, we might want to scroll to the top or show a modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const logout = async () => {
@@ -376,8 +380,10 @@ export default function App() {
              isVegLoading={isVegLoading}
              login={login}
              logout={logout}
-             loginInProgress={loginInProgress}
+             loginStep={loginStep}
+             setLoginStep={setLoginStep}
              authError={authError}
+             setAuthError={setAuthError}
              t={t}
              isProfileIncomplete={isProfileIncomplete}
           />
@@ -402,8 +408,10 @@ function AppContent({
   isVegLoading,
   login,
   logout,
-  loginInProgress,
+  loginStep,
+  setLoginStep,
   authError,
+  setAuthError,
   t,
   isProfileIncomplete
 }: any) {
@@ -413,6 +421,10 @@ function AppContent({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -529,95 +541,181 @@ function AppContent({
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-black flex flex-col overflow-hidden relative">
-        <RollingVeg />
-        
-        {/* Top Image Section */}
-        <div className="relative h-[48vh] sm:h-[55vh] overflow-hidden">
-          <motion.img 
-            initial={{ scale: 1.1, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
-            src="https://images.unsplash.com/photo-1540148426945-6cf22a6b2383?auto=format&fit=crop&q=80&w=1200" 
-            alt="Fresh Farm" 
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-farm-g1 via-farm-g1/20 to-transparent" />
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = phoneNumber.replace(/\D/g, '').slice(-10);
+    if (cleanPhone.length < 10) return;
+    
+    setPhoneNumber(cleanPhone);
+    setAuthLoading(true);
+    setAuthError(null);
+    setErrorMessage(null);
+    try {
+      const { checkUserExists } = await import('./lib/firebase');
+      const userExists = await checkUserExists(cleanPhone);
+
+      if (userExists) {
+        setLoginStep('password');
+      } else {
+        setLoginStep('signup');
+      }
+    } catch (err: any) {
+      console.error("Auth check error", err);
+      // If we can't check, we'll try signup and handle "already in use" there
+      setLoginStep('signup'); 
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    try {
+      const { loginWithPhone } = await import('./lib/firebase');
+      await loginWithPhone(phoneNumber, password);
+    } catch (err: any) {
+      setAuthError(err.message.includes('auth/wrong-password') ? 'કોડ (Password) ખોટો છે.' : 'લોગિન નિષ્ફળ ગયું.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  if (!user || (user && !profile?.firstName)) {
+    if (loginStep === 'phone' && !user) {
+      return (
+        <div className="min-h-screen bg-farm-g1 flex items-center justify-center p-6 relative overflow-hidden">
+          <div className="absolute top-[-100px] right-[-100px] w-[400px] h-[400px] rounded-full bg-farm-g4 opacity-[0.05]" />
+          <div className="absolute bottom-[-100px] left-[-100px] w-[300px] h-[300px] rounded-full bg-farm-g4 opacity-[0.05]" />
           
-          <div className="absolute bottom-12 left-0 right-0 p-8 text-center">
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <h2 className="text-farm-s2 text-sm font-black uppercase tracking-[0.3em] mb-2 font-syne">
-                {t.gujaratFinest}
-              </h2>
-              <h1 className="text-5xl font-extrabold text-white tracking-tight drop-shadow-2xl">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm space-y-8 relative z-10"
+          >
+            <div className="text-center">
+              <div className="w-24 h-24 bg-farm-g2/10 border border-farm-g3/30 rounded-[32px] flex items-center justify-center mx-auto mb-6 backdrop-blur-md shadow-2xl animate-float">
+                <ShoppingBasket className="h-12 w-12 text-farm-s2" />
+              </div>
+              <h1 className="text-5xl font-black text-white tracking-tighter mb-2 font-syne italic uppercase">
                 Fresh <span className="text-farm-s2">Farm</span>
               </h1>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Login Section */}
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="flex-1 bg-farm-cream px-8 pb-12 flex flex-col items-center justify-center -mt-10 relative z-10 rounded-t-[32px] shadow-2xl"
-        >
-          <div className="max-w-xs w-full space-y-8 text-center">
-            <div className="space-y-4">
-              <motion.button 
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={login}
-                disabled={loginInProgress}
-                className={`w-full bg-farm-g1 text-white py-4.5 rounded-2xl font-bold text-base shadow-xl flex items-center justify-center gap-3 transition-all hover:bg-farm-g2 group border border-farm-g3/20 ${loginInProgress ? 'opacity-70 cursor-not-allowed' : ''}`}
-              >
-                <div className="w-7 h-7 p-1.5 bg-white rounded-full flex items-center justify-center transition-transform">
-                  {loginInProgress ? (
-                    <Loader2 className="h-4 w-4 text-farm-g1 animate-spin" />
-                  ) : (
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-full h-full" />
-                  )}
-                </div>
-                <span className="gu text-farm-s2 font-bold">
-                  {loginInProgress ? 'Logging in...' : t.loginWithGoogle}
-                </span>
-              </motion.button>
-              
-              {authError && (
-                <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider animate-bounce">
-                  {authError}
-                </p>
-              )}
-              
-              <p className="text-[10px] text-farm-muted font-medium uppercase tracking-[0.1em] opacity-60">
-                {t.loginSub}
-              </p>
+              <p className="text-[10px] font-bold text-white/40 tracking-[0.4em] uppercase mb-12">GUJARAT'S FINEST</p>
             </div>
-            
-            <button 
-              onClick={() => setShowLanguageSelection(true)}
-              className="mt-4 text-xs font-bold text-farm-g2 hover:text-farm-g3 flex items-center justify-center gap-2 mx-auto bg-white/50 px-5 py-2 rounded-full border border-farm-border"
-            >
-              Change Language / ભાષા બદલો
-            </button>
-          </div>
 
-          <div className="absolute bottom-8 text-center w-full px-8">
-            <p className="text-[10px] text-farm-muted font-bold tracking-tight opacity-40">
-              {t.privacyTerms}
-            </p>
-          </div>
-        </motion.div>
-      </div>
-    );
+            <form onSubmit={handlePhoneSubmit} className="space-y-6 bg-white/5 p-8 rounded-[38px] border border-white/10 backdrop-blur-xl shadow-2xl">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-farm-s2 uppercase tracking-[0.2em] ml-1 opacity-80">Enter Mobile Number</label>
+                <div className="relative">
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-white/40 font-bold">+91</span>
+                  <input
+                    required
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={e => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    className="w-full pl-16 pr-6 py-5 bg-white/10 border-2 border-white/10 rounded-[22px] outline-none focus:border-farm-s2 focus:bg-white/20 transition-all font-black text-white text-lg placeholder:text-white/20"
+                    placeholder="9876543210"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={phoneNumber.length < 10 || authLoading}
+                className="w-full bg-farm-s2 text-farm-g1 py-5 rounded-[22px] font-black text-lg shadow-2xl hover:bg-white transition-all flex items-center justify-center gap-3 disabled:opacity-30 disabled:grayscale group"
+              >
+                {authLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Phone className="h-6 w-6 group-hover:rotate-12 transition-transform" />}
+                <span className="uppercase tracking-widest italic font-syne">CONTINUE</span>
+              </button>
+              
+              <p className="text-[9px] text-center text-white/30 font-bold uppercase tracking-widest">
+                By continuing, you agree to our terms
+              </p>
+            </form>
+          </motion.div>
+        </div>
+      );
+    }
+
+    if (loginStep === 'password' && !user) {
+      return (
+        <div className="min-h-screen bg-farm-g1 flex items-center justify-center p-6 relative overflow-hidden">
+          <div className="absolute top-[-100px] right-[-100px] w-[400px] h-[400px] rounded-full bg-farm-g4 opacity-[0.05]" />
+          <div className="absolute bottom-[-100px] left-[-100px] w-[300px] h-[300px] rounded-full bg-farm-g4 opacity-[0.05]" />
+          
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm space-y-8 relative z-10"
+          >
+            <div className="text-center relative">
+              <button onClick={() => setLoginStep('phone')} className="absolute -top-4 -left-4 p-3 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors">
+                <X className="h-6 w-6" />
+              </button>
+              <div className="w-20 h-20 bg-farm-g2/10 border border-farm-g3/30 rounded-[28px] flex items-center justify-center mx-auto mb-6 backdrop-blur-md shadow-2xl">
+                <ShieldCheck className="h-10 w-10 text-farm-s2" />
+              </div>
+              <h2 className="text-3xl font-black text-white tracking-tighter mb-1 italic font-syne uppercase">Welcome Back</h2>
+              <p className="text-[10px] font-bold text-white/40 tracking-widest uppercase mb-10">Enter password for {phoneNumber}</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-6 bg-white/5 p-8 rounded-[38px] border border-white/10 backdrop-blur-xl shadow-2xl">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-farm-s2 uppercase tracking-[0.2em] ml-1 opacity-80">PASSWORD</label>
+                <input
+                  required
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full p-5 bg-white/10 border-2 border-white/10 rounded-[22px] outline-none focus:border-farm-s2 focus:bg-white/20 transition-all font-black text-white text-lg placeholder:text-white/20"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              {authError && <p className="text-red-400 text-[10px] font-bold uppercase tracking-widest text-center bg-red-400/10 py-2 rounded-lg">{authError}</p>}
+
+              <button
+                type="submit"
+                disabled={password.length < 1 || authLoading}
+                className="w-full bg-farm-s2 text-farm-g1 py-5 rounded-[22px] font-black text-lg shadow-2xl hover:bg-white transition-all flex items-center justify-center gap-3 disabled:opacity-30 group"
+              >
+                {authLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <LogIn className="h-6 w-6 group-hover:translate-x-1 transition-transform" />}
+                <span className="uppercase tracking-widest italic font-syne">LOG IN</span>
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => setErrorMessage("Please contact support to reset your password.")}
+                className="w-full text-[10px] font-black text-white/30 hover:text-farm-s2 transition-colors uppercase tracking-widest"
+              >
+                Forgot Password?
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      );
+    }
+
+    if (loginStep === 'signup' || (user && !profile?.firstName)) {
+      return (
+        <SignupScreen 
+          user={user}
+          phoneNumber={phoneNumber || user?.email?.split('@')[0] || ''} 
+          onCancel={() => {
+            if (user) {
+              logout();
+            }
+            setLoginStep('phone');
+          }} 
+          setLoginStep={setLoginStep}
+          t={t}
+          onComplete={(p: UserProfile) => {
+            setProfile(p);
+            setLoginStep('phone'); // Reset step for next logout
+          }}
+        />
+      );
+    }
   }
 
   return (
@@ -704,7 +802,7 @@ function AppContent({
               )}
             </button>
 
-            {user ? (
+            {user && (
               <div className="flex items-center gap-2 sm:gap-3">
                 <div 
                   onClick={() => window.location.hash = '/profile'}
@@ -723,14 +821,6 @@ function AppContent({
                   )}
                 </div>
               </div>
-            ) : (
-              <button
-                onClick={login}
-                className="bg-farm-s1 text-farm-g1 px-4 py-2 rounded-xl text-xs font-black hover:bg-farm-s2 transition-all flex items-center gap-2 shadow-xl hover:scale-105 active:scale-95"
-              >
-                <LogIn className="h-4 w-4" />
-                {t.login}
-              </button>
             )}
           </div>
         </div>
@@ -831,11 +921,11 @@ function UserProfilePage({ profile, user, logout, onEditProfile, onChangeLanguag
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="bg-white p-6 rounded-2xl border border-farm-border shadow-sm group hover:border-farm-g3 transition-colors">
           <div className="text-2xl font-bold text-farm-g1 mb-1">₹0</div>
-          <div className="text-[10px] font-bold gu text-farm-muted uppercase tracking-widest">કુલ બચત</div>
+          <div className="text-[10px] font-bold gu text-farm-muted uppercase tracking-widest">{t.totalSavings}</div>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-farm-border shadow-sm group hover:border-farm-g3 transition-colors">
           <div className="text-2xl font-bold text-farm-g1 mb-1">0</div>
-          <div className="text-[10px] font-bold gu text-farm-muted uppercase tracking-widest">ઓર્ડર કર્યા</div>
+          <div className="text-[10px] font-bold gu text-farm-muted uppercase tracking-widest">{t.ordersPlaced}</div>
         </div>
       </div>
 
@@ -847,7 +937,7 @@ function UserProfilePage({ profile, user, logout, onEditProfile, onChangeLanguag
               </div>
               <div className="text-left">
                 <h4 className="font-bold text-farm-g1 text-sm gu">{t.myOrders}</h4>
-                <p className="text-[10px] text-farm-muted gu font-medium">તમારા તમામ ઓર્ડર અહી જુઓ</p>
+                <p className="text-[10px] text-farm-muted gu font-medium">{t.viewAllOrders}</p>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 text-farm-muted group-hover:text-farm-g1 transition-colors" />
@@ -862,7 +952,7 @@ function UserProfilePage({ profile, user, logout, onEditProfile, onChangeLanguag
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-farm-g1 text-sm gu">{t.address}</h4>
                   <button onClick={onEditProfile} className="text-[10px] text-farm-g1 bg-farm-g1/10 px-2 py-1 rounded-md font-bold uppercase hover:bg-farm-g1/20 transition-colors flex items-center gap-1">
-                    <UserIcon className="h-3 w-3" /> એડિટ
+                    <UserIcon className="h-3 w-3" /> {t.edit}
                   </button>
                 </div>
                 <p className="text-xs text-farm-muted gu mt-1 font-medium leading-relaxed">{profile.address}</p>
@@ -880,21 +970,236 @@ function UserProfilePage({ profile, user, logout, onEditProfile, onChangeLanguag
                 <Settings className="h-5 w-5 text-farm-g1" />
               </div>
               <div className="text-left">
-                <h4 className="font-bold text-farm-g1 text-sm gu">સેટિંગ્સ (Settings)</h4>
-                <p className="text-[10px] text-farm-muted gu font-medium">ભાષા બદલો / Change Language</p>
+                <h4 className="font-bold text-farm-g1 text-sm gu">{t.settings}</h4>
+                <p className="text-[10px] text-farm-muted gu font-medium">{t.settingsSub} / Change Language</p>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 text-farm-muted group-hover:text-farm-g1 transition-colors" />
          </button>
-      </div>
 
-      <button
-        onClick={logout}
-        className="w-full bg-red-50 text-red-600 py-4.5 rounded-2xl font-bold text-sm tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-2.5"
-      >
-        <LogOut className="h-5 w-5" />
-        LOG OUT
-      </button>
+         {profile.role === 'admin' && (
+            <button onClick={() => window.location.hash = '/admin-portal'} className="w-full bg-farm-g1 text-farm-s2 p-5 rounded-2xl border border-farm-g3 flex items-center justify-between hover:bg-farm-g2 hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="bg-white/10 p-2.5 rounded-xl">
+                  <ShieldCheck className="h-5 w-5 text-farm-s2" />
+                </div>
+                <div className="text-left">
+                  <h4 className="font-bold text-white text-sm gu">Admin Dashboard</h4>
+                  <p className="text-[10px] text-farm-s2/60 gu font-medium italic">Manage Shop & Orders</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-farm-s2" />
+            </button>
+         )}
+
+         {user && (
+           <button
+              onClick={logout}
+              className="w-full bg-red-50 text-red-600 py-4.5 rounded-2xl font-bold text-sm tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-2.5"
+            >
+              <LogOut className="h-5 w-5" />
+              LOG OUT
+            </button>
+         )}
+      </div>
+    </div>
+  );
+}
+
+function SignupScreen({ user, phoneNumber, onCancel, setLoginStep, t, onComplete }: { user: any, phoneNumber: string, onCancel: () => void, setLoginStep: (s: any) => void, t: any, onComplete: (p: UserProfile) => void }) {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    gender: 'male' as 'male' | 'female',
+    password: '',
+    address: '',
+    age: '',
+    lat: 0,
+    lng: 0
+  });
+  const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    handleGetLocation();
+  }, []);
+
+  const handleGetLocation = () => {
+    setLocating(true);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData(prev => ({ ...prev, lat: position.coords.latitude, lng: position.coords.longitude }));
+          setLocating(false);
+        },
+        () => setLocating(false),
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
+  };
+
+  const [signupError, setSignupError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setSignupError(null);
+    try {
+      const { registerWithPhone } = await import('./lib/firebase');
+      const adminEmails = ['patelb393@gmail.com', 'peacockverse@gmail.com', '7043439580@farm.com', '9723786200@farm.com'];
+      const userEmail = `${phoneNumber}@farm.com`;
+      const role = adminEmails.includes(userEmail) ? 'admin' : 'user';
+
+      let uid = user?.uid;
+
+      if (!user) {
+        const userCredential = await registerWithPhone(phoneNumber, formData.password);
+        uid = userCredential.user.uid;
+      }
+      
+      const profileData = {
+        email: userEmail,
+        role: role,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        gender: formData.gender,
+        phone: phoneNumber,
+        address: formData.address,
+        age: Number(formData.age),
+        lat: formData.lat || 0,
+        lng: formData.lng || 0,
+        created_at: serverTimestamp()
+      };
+
+      try {
+        await setDoc(doc(db, 'profiles', uid), profileData);
+      } catch (firestoreErr) {
+        console.error("Profile setDoc failed", firestoreErr);
+        setSignupError("Account verified but profile update failed. Please try again.");
+        return;
+      }
+      
+      onComplete({
+        uid: uid,
+        ...profileData,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        createdAt: new Date().toISOString()
+      } as any);
+    } catch (err: any) {
+      console.error("Signup error", err);
+      if (err.code === 'auth/operation-not-allowed') {
+        setSignupError("Email/Password login is not enabled in Firebase Console. Please enable it.");
+      } else if (err.code === 'auth/email-already-in-use' || err.message?.includes('already-in-use')) {
+        setSignupError("This phone number is already registered. Switching to login...");
+        // Redirect to password step since they already exist
+        setTimeout(() => {
+          setLoginStep('password');
+        }, 1500);
+      } else if (err.code === 'auth/invalid-email') {
+        setSignupError("Invalid phone format for registration.");
+      } else {
+        setSignupError(err.message || 'Registration failed. Please check your connection.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-farm-g1/90 backdrop-blur-md">
+      <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 max-h-[90vh] flex flex-col">
+        <div className="p-8 pb-6 bg-[#1a3a1a] text-white relative flex-shrink-0">
+          <button onClick={onCancel} className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors">
+            <X className="h-6 w-6" />
+          </button>
+          <div className="flex items-center gap-4 mb-2">
+            <h3 className="text-3xl font-black italic tracking-tight font-syne">Join Fresh Farm</h3>
+          </div>
+          <p className="text-[10px] font-black text-farm-s2 leading-relaxed uppercase tracking-[0.15em] opacity-80">
+            Create your account for {phoneNumber}
+          </p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto no-scrollbar flex-1">
+          {signupError && (
+            <div className="p-4 bg-red-50 border-2 border-red-100 rounded-2xl space-y-2 text-center">
+              <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">{signupError}</p>
+              {signupError.includes('already registered') && (
+                <button 
+                  type="button"
+                  onClick={() => onCancel()}
+                  className="text-[10px] font-black text-farm-g1 underline uppercase tracking-widest"
+                >
+                  GO TO LOGIN
+                </button>
+              )}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1">FIRST NAME</label>
+              <input required type="text" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 font-bold" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1">LAST NAME</label>
+              <input required type="text" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 font-bold" />
+            </div>
+          </div>
+
+          {!user && (
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1">CREATE PASSWORD (તમારા માટે કોડ)</label>
+              <input required type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 font-bold" placeholder="Minimum 6 characters" minLength={6} />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1">AGE (ઉંમર)</label>
+              <input required type="number" value={formData.age} onChange={e => setFormData({ ...formData, age: e.target.value })} className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 font-bold" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1">GENDER</label>
+              <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value as any })} className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 font-bold">
+                <option value="male">MALE</option>
+                <option value="female">FEMALE</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1">DELIVERY ADDRESS (સરનામું)</label>
+            <textarea required value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 font-bold min-h-[100px]" />
+          </div>
+
+          <div className="p-4 bg-farm-cream rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black text-farm-g1 uppercase tracking-widest">LOCATION</label>
+              <button type="button" onClick={handleGetLocation} className="text-[10px] font-black text-farm-g1 underline">{locating ? 'LOCATING...' : 'REFRESH'}</button>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1 text-center bg-white p-2 rounded-xl border border-farm-border">
+                <p className="text-[8px] text-farm-muted uppercase font-black tracking-widest">LAT</p>
+                <p className="text-xs font-mono font-black">{formData.lat.toFixed(4)}</p>
+              </div>
+              <div className="flex-1 text-center bg-white p-2 rounded-xl border border-farm-border">
+                <p className="text-[8px] text-farm-muted uppercase font-black tracking-widest">LNG</p>
+                <p className="text-xs font-mono font-black">{formData.lng.toFixed(4)}</p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-farm-g1 text-farm-s2 py-5 rounded-[24px] font-black text-xl shadow-xl hover:bg-farm-g2 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <CheckCircle className="h-6 w-6" />}
+            <span className="font-syne italic uppercase tracking-tight">REGISTER & START</span>
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -952,82 +1257,104 @@ function ProfileSetupModal({ profile, onSave, t, language }: { profile: UserProf
     e.preventDefault();
     setLoading(true);
     try {
-      const profileRef = doc(db, 'profiles', profile.uid);
-      await updateDoc(profileRef, {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        gender: formData.gender,
-        phone: formData.phone,
-        address: formData.address,
-        age: Number(formData.age),
-        lat: formData.lat,
-        lng: formData.lng,
-        updated_at: serverTimestamp()
-      });
+      const isGuest = !auth.currentUser;
+      
+      if (!isGuest) {
+        const profileRef = doc(db, 'profiles', profile.uid);
+        await updateDoc(profileRef, {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          gender: formData.gender,
+          phone: formData.phone,
+          address: formData.address,
+          age: Number(formData.age),
+          lat: formData.lat,
+          lng: formData.lng,
+          updated_at: serverTimestamp()
+        });
+      }
+      
+      // Always store in localStorage for guest mode persistence
+      localStorage.setItem('guest_profile', JSON.stringify({
+        ...formData,
+        uid: profile.uid,
+        age: Number(formData.age)
+      }));
       
       onSave({ ...profile, ...formData, age: Number(formData.age) });
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `profiles/${profile.uid}`);
+      if (auth.currentUser) {
+        handleFirestoreError(err, OperationType.UPDATE, `profiles/${profile.uid}`);
+      } else {
+        console.error("Local save fallback", err);
+        onSave({ ...profile, ...formData, age: Number(formData.age) });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-farm-g1/80 backdrop-blur-md">
-      <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-farm-border">
-        <div className="p-8 border-b border-farm-border bg-gradient-to-r from-farm-g1 to-farm-g2 text-white relative overflow-hidden">
-          <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-farm-s2 opacity-10 rounded-full blur-2xl" />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-farm-g1/90 backdrop-blur-md">
+      <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+        <div className="p-8 pb-6 bg-[#1a3a1a] text-white relative overflow-hidden border-b-[6px] border-farm-s2/20">
+          <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-farm-s2 opacity-5 rounded-full blur-2xl" />
           <div className="relative z-10">
-            <h3 className="text-2xl font-black font-syne italic flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-                <UserIcon className="h-6 w-6 text-farm-s2" />
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 shadow-inner">
+                <UserIcon className="h-8 w-8 text-farm-s2" />
               </div>
-              {t.completeProfile}
-            </h3>
-            <p className="text-[10px] font-bold text-farm-s2/60 mt-4 gu leading-relaxed uppercase tracking-widest">{t.completeProfileSub}</p>
+              <h3 className="text-3xl font-black italic tracking-tight font-syne">
+                Complete Your Profile
+              </h3>
+            </div>
+            <p className="text-[10px] font-black text-farm-s2 mt-2 leading-relaxed uppercase tracking-[0.15em] opacity-80">
+              THESE DETAILS ARE REQUIRED TO PLACE AN ORDER.
+            </p>
           </div>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar pb-12">
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[75vh] overflow-y-auto no-scrollbar pb-10">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-farm-muted uppercase tracking-widest ml-1">{t.firstName}</label>
+              <label className="block text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1 opacity-70">FIRST NAME</label>
               <input
                 required
                 type="text"
                 value={formData.firstName}
                 onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 gu"
-                placeholder={t.firstName === "નામ" ? "દા.ત. રમેશ" : t.firstName === "नाम" ? "जैसे: रमेश" : "e.g. Ramesh"}
+                className="w-full p-4 bg-farm-cream/50 border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 placeholder:text-farm-muted/30"
+                placeholder="e.g. Ramesh"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-farm-muted uppercase tracking-widest ml-1">{t.lastName}</label>
+              <label className="block text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1 opacity-70">LAST NAME</label>
               <input
                 required
                 type="text"
                 value={formData.lastName}
                 onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 gu"
-                placeholder={t.lastName === "અટક" ? "દા.ત. પટેલ" : t.lastName === "सरनेम" ? "जैसे: पटेल" : "e.g. Patel"}
+                className="w-full p-4 bg-farm-cream/50 border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 placeholder:text-farm-muted/30"
+                placeholder="e.g. Patel"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-black text-farm-muted uppercase tracking-widest ml-1">{t.gender}</label>
-            <div className="flex gap-3">
+            <label className="block text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1 opacity-70">GENDER</label>
+            <div className="flex gap-4">
               {['male', 'female'].map(g => (
                 <button
                   key={g}
                   type="button"
                   onClick={() => setFormData({ ...formData, gender: g as any })}
-                  className={`flex-1 py-3.5 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all ${
-                    formData.gender === g ? 'border-farm-g1 bg-farm-g1 text-farm-s2 shadow-lg' : 'border-farm-border bg-white text-farm-muted hover:border-farm-g2'
+                  className={`flex-1 py-4 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all ${
+                    formData.gender === g 
+                      ? 'border-farm-g1 bg-farm-g1 text-farm-s2 shadow-lg shadow-farm-g1/20' 
+                      : 'border-farm-border bg-white text-farm-muted/60 hover:border-farm-g2'
                   }`}
                 >
-                  {g === 'male' ? t.male : t.female}
+                  {g === 'male' ? 'MALE' : 'FEMALE'}
                 </button>
               ))}
             </div>
@@ -1035,64 +1362,65 @@ function ProfileSetupModal({ profile, onSave, t, language }: { profile: UserProf
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-farm-muted uppercase tracking-widest ml-1">{t.age}</label>
+              <label className="block text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1 opacity-70">AGE</label>
               <input
                 required
                 type="number"
                 value={formData.age}
                 onChange={e => setFormData({ ...formData, age: e.target.value })}
-                className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1"
+                className="w-full p-4 bg-farm-cream/50 border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 placeholder:text-farm-muted/30"
                 placeholder="25"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-farm-muted uppercase tracking-widest ml-1">{t.phone}</label>
+              <label className="block text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1 opacity-70">MOBILE NUMBER</label>
               <input
                 required
                 type="tel"
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1"
+                className="w-full p-4 bg-farm-cream/50 border-2 border-farm-border rounded-2xl outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 placeholder:text-farm-muted/30"
                 placeholder="9876543210"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-black text-farm-muted uppercase tracking-widest ml-1">{t.address}</label>
+            <label className="block text-[10px] font-black text-farm-g1 uppercase tracking-widest ml-1 opacity-70">DELIVERY ADDRESS</label>
             <textarea
               required
               value={formData.address}
               onChange={e => setFormData({ ...formData, address: e.target.value })}
-              className="w-full p-4 bg-farm-cream border-2 border-farm-border rounded-[24px] outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 min-h-[100px] gu"
-              placeholder={t.addressPlaceholder}
+              className="w-full p-5 bg-farm-cream/50 border-2 border-farm-border rounded-[24px] outline-none focus:border-farm-g2 transition-all font-bold text-farm-g1 min-h-[110px] placeholder:text-farm-muted/30 leading-relaxed"
+              placeholder="Full delivery address"
             />
           </div>
 
-          <div className="p-6 bg-farm-cream rounded-[28px] border-2 border-farm-border space-y-4 shadow-inner">
+          <div className="p-6 bg-farm-cream/30 rounded-[32px] border-2 border-farm-border space-y-4 shadow-inner">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-black text-farm-g2 flex items-center gap-2 uppercase tracking-widest">
+              <label className="text-[10px] font-black text-farm-g1 flex items-center gap-2 uppercase tracking-widest opacity-80">
                 <MapPin className="h-4 w-4 text-farm-s2" />
-                {t.location}
+                YOUR LOCATION
               </label>
               <button
                 type="button"
                 onClick={handleGetLocation}
                 disabled={locating}
-                className="text-[11px] font-black text-farm-g1 underline underline-offset-4 uppercase tracking-[0.1em] hover:text-farm-g2 flex items-center gap-1 transition-colors disabled:opacity-50"
+                className="text-[11px] font-black text-farm-g1 underline underline-offset-4 uppercase tracking-widest hover:text-farm-g2 flex items-center gap-1 transition-colors disabled:opacity-50"
               >
-                {locating ? (language === 'gu' ? 'મેળવી રહ્યા છીએ...' : language === 'hi' ? 'खोज रहे हैं...' : 'LOCATING...') : t.autoLocate}
+                {locating ? 'LOCATING...' : 'AUTO LOCATE'}
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white p-3 rounded-xl border border-farm-border text-center">
-                <p className="text-[8px] text-farm-muted uppercase font-black tracking-widest mb-1">LATITUDE</p>
-                <p className="text-xs font-mono font-black text-farm-g1">{formData.lat.toFixed(4)}</p>
+            
+            <div className="flex gap-4">
+              <div className="flex-1 bg-white/50 p-3 rounded-2xl border border-farm-border text-center">
+                <p className="text-[8px] text-farm-muted uppercase font-black tracking-widest mb-1 opacity-50">LAT</p>
+                <p className="text-sm font-mono font-black text-farm-g1">{formData.lat ? formData.lat.toFixed(4) : '--'}</p>
               </div>
-              <div className="bg-white p-3 rounded-xl border border-farm-border text-center">
-                <p className="text-[8px] text-farm-muted uppercase font-black tracking-widest mb-1">LONGITUDE</p>
-                <p className="text-xs font-mono font-black text-farm-g1">{formData.lng.toFixed(4)}</p>
+              <div className="flex-1 bg-white/50 p-3 rounded-2xl border border-farm-border text-center">
+                <p className="text-[8px] text-farm-muted uppercase font-black tracking-widest mb-1 opacity-50">LNG</p>
+                <p className="text-sm font-mono font-black text-farm-g1">{formData.lng ? formData.lng.toFixed(4) : '--'}</p>
               </div>
             </div>
           </div>
@@ -1100,12 +1428,10 @@ function ProfileSetupModal({ profile, onSave, t, language }: { profile: UserProf
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-farm-g1 text-farm-s2 py-5 rounded-[24px] font-black text-lg shadow-2xl hover:bg-farm-g2 transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95 group relative overflow-hidden"
+            className="w-full bg-farm-g1 text-farm-s2 py-5 rounded-[24px] font-black text-xl shadow-2xl hover:bg-farm-g2 transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-[0.98] group"
           >
-            <div className="relative z-10 flex items-center gap-3 font-syne italic uppercase tracking-tight">
-              {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
-              {t.save}
-            </div>
+            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6" />}
+            <span className="font-syne italic uppercase tracking-tight">SAVE & START ORDERING</span>
           </button>
         </form>
       </div>
