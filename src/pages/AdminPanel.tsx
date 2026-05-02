@@ -75,15 +75,38 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
 
   // Dashboard Calculations
   const dashboardData = React.useMemo(() => {
-    const deliveredOrders = orders.filter(o => o.status === 'Delivered');
-    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-    const totalProfit = deliveredOrders.reduce((sum, o) => {
-      const orderProfit = o.items.reduce((pSum, item) => {
-        const cost = item.costPrice || 0;
+    // Basic stats (all non-cancelled orders)
+    const activeOrders = orders.filter(o => o.status !== 'Cancelled');
+    const totalOrders = activeOrders.length;
+    const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+
+    // Delivered & Paid Orders (The basis for "Realized Profit" per user definition)
+    const settledOrders = orders.filter(o => o.status === 'Delivered' && o.paymentStatus === 'Completed');
+    
+    // Revenue from settled orders
+    const totalRevenue = settledOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+    
+    let productMargin = 0;
+    let deliveryIncome = 0;
+
+    settledOrders.forEach(o => {
+      const charge = (o.deliveryCharge || 0);
+      deliveryIncome += charge;
+      
+      const orderProductProfit = o.items.reduce((pSum, item) => {
+        // Use costPrice from order item if available (best for historical records), fallback to current vegetable data
+        const vegetable = vegetables.find(v => v.id === item.vegId);
+        const pricingOpt = vegetable?.pricingOptions?.find(opt => opt.unit === item.unit);
+        
+        const cost = item.costPrice ?? pricingOpt?.costPrice ?? 0;
         return pSum + (item.price - cost) * item.quantity;
       }, 0);
-      return sum + orderProfit;
-    }, 0);
+      
+      // The profit from products is item-margin minus any overall discount applied to the order
+      productMargin += (orderProductProfit - (o.discountAmount || 0));
+    });
+
+    const totalProfit = productMargin + deliveryIncome;
 
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = subDays(new Date(), i);
@@ -113,7 +136,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
       return { name: v.name, quantity };
     }).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
 
-    return { totalRevenue, totalProfit, totalOrders: orders.length, last7Days, topItems };
+    return { totalRevenue, totalProfit, productMargin, deliveryIncome, totalOrders, pendingOrders, last7Days, topItems };
   }, [orders, vegetables]);
   
   // Image upload states
@@ -345,7 +368,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
   const getSalesReport = (period: 'day' | 'week' | 'month') => {
     const now = new Date();
     const filteredOrders = orders.filter(order => {
-      if (order.status === 'Cancelled') return false;
+      if (order.status !== 'Delivered' || order.paymentStatus !== 'Completed') return false;
       const orderDate = new Date(order.createdAt);
       if (period === 'day') {
         return orderDate.toDateString() === now.toDateString();
@@ -363,9 +386,14 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
     const report: { [key: string]: { kg: number, pcs: number, revenue: number, cost: number, profit: number } } = {};
     let totalRevenue = 0;
     let totalCost = 0;
+    let totalDeliveryIncome = 0;
+    let totalDiscount = 0;
 
     filteredOrders.forEach(order => {
       totalRevenue += order.totalAmount;
+      totalDeliveryIncome += (order.deliveryCharge || 0);
+      totalDiscount += (order.discountAmount || 0);
+      
       order.items.forEach(item => {
         if (!report[item.name]) {
           report[item.name] = { kg: 0, pcs: 0, revenue: 0, cost: 0, profit: 0 };
@@ -374,11 +402,11 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
         const itemRevenue = item.price * item.quantity;
         report[item.name].revenue += itemRevenue;
 
-        // Find cost price from current vegetables data
+        // Find cost price from order item or current vegetables data
         const veg = vegetables.find(v => v.id === item.vegId);
         const pricingOption = veg?.pricingOptions.find(p => p.unit === item.unit);
-        const costPrice = pricingOption?.costPrice || 0;
-        const itemCost = costPrice * item.quantity;
+        const actualCost = item.costPrice ?? pricingOption?.costPrice ?? 0;
+        const itemCost = actualCost * item.quantity;
         
         report[item.name].cost += itemCost;
         report[item.name].profit += (itemRevenue - itemCost);
@@ -398,7 +426,9 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
       items: Object.entries(report).sort((a, b) => b[1].revenue - a[1].revenue),
       totalRevenue,
       totalCost,
-      totalProfit: totalRevenue - totalCost,
+      totalDeliveryIncome,
+      totalDiscount,
+      totalProfit: (totalRevenue - totalCost), // Since totalRevenue = items + delivery - discount, and we want profit to include delivery
       orderCount: filteredOrders.length
     };
   };
@@ -1209,10 +1239,20 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                 <div className="bg-farm-cream p-4 rounded-2xl border border-farm-border text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <TrendingUp className="h-7 w-7" />
                 </div>
-                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full uppercase tracking-widest shadow-sm">EST. PROFIT</span>
+                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full uppercase tracking-widest shadow-sm">REALIZED PROFIT</span>
               </div>
               <h3 className="text-3xl font-black text-farm-g1 font-syne italic">{formatINR(dashboardData.totalProfit)}</h3>
-              <p className="text-[10px] text-farm-muted font-bold mt-2 uppercase tracking-widest opacity-60">Revenue minus cost</p>
+              <div className="mt-4 grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Products</p>
+                  <p className="text-sm font-black text-farm-g1">{formatINR(dashboardData.productMargin)}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Delivery</p>
+                  <p className="text-sm font-black text-farm-g1">{formatINR(dashboardData.deliveryIncome)}</p>
+                </div>
+              </div>
+              <p className="text-[8px] text-farm-muted font-bold mt-4 uppercase tracking-widest opacity-40">Delivered & Paid Orders Only</p>
             </div>
 
             <div className="bg-white p-8 rounded-[32px] border border-farm-border shadow-farm-card relative overflow-hidden group hover:scale-[1.02] transition-all">
@@ -1224,7 +1264,16 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                 <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full uppercase tracking-widest shadow-sm">TOTAL ORDERS</span>
               </div>
               <h3 className="text-3xl font-black text-farm-g1 font-syne italic">{dashboardData.totalOrders}</h3>
-              <p className="text-[10px] text-farm-muted font-bold mt-2 uppercase tracking-widest opacity-60">Total orders processed</p>
+              <div className="mt-4 flex items-center gap-2">
+                <div className="flex-1 bg-amber-50 py-2 px-3 rounded-xl border border-amber-100/50">
+                  <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-0.5">Pending</p>
+                  <p className="text-sm font-black text-amber-700">{dashboardData.pendingOrders}</p>
+                </div>
+                <div className="flex-1 bg-green-50 py-2 px-3 rounded-xl border border-green-100/50">
+                  <p className="text-[9px] font-black text-green-600 uppercase tracking-widest mb-0.5">Processed</p>
+                  <p className="text-sm font-black text-green-700">{dashboardData.totalOrders - dashboardData.pendingOrders}</p>
+                </div>
+              </div>
             </div>
 
             <div className="bg-white p-8 rounded-[32px] border border-farm-border shadow-farm-card relative overflow-hidden group hover:scale-[1.02] transition-all">
@@ -1939,6 +1988,16 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                         <p className="text-lg font-black text-green-700">{getSalesReport('day').orderCount}</p>
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-green-100">
+                      <div>
+                        <p className="text-[9px] text-green-600 font-bold uppercase opacity-70">વસ્તુઓ (Products)</p>
+                        <p className="text-xs font-black text-green-700">{formatINR(getSalesReport('day').totalRevenue - getSalesReport('day').totalDeliveryIncome + getSalesReport('day').totalDiscount)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] text-green-600 font-bold uppercase opacity-70">ડિલિવરી (Delivery)</p>
+                        <p className="text-xs font-black text-green-700">{formatINR(getSalesReport('day').totalDeliveryIncome)}</p>
+                      </div>
+                    </div>
                     <div className="flex justify-between items-end pt-2 border-t border-green-100">
                       <div>
                         <p className="text-[10px] text-green-600 font-bold uppercase">ખરીદ કિંમત (Cost)</p>
@@ -2018,6 +2077,16 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                         <p className="text-lg font-black text-blue-700">{getSalesReport('week').orderCount}</p>
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-100">
+                      <div>
+                        <p className="text-[9px] text-blue-600 font-bold uppercase opacity-70">વસ્તુઓ (Products)</p>
+                        <p className="text-xs font-black text-blue-700">{formatINR(getSalesReport('week').totalRevenue - getSalesReport('week').totalDeliveryIncome + getSalesReport('week').totalDiscount)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] text-blue-600 font-bold uppercase opacity-70">ડિલિવરી (Delivery)</p>
+                        <p className="text-xs font-black text-blue-700">{formatINR(getSalesReport('week').totalDeliveryIncome)}</p>
+                      </div>
+                    </div>
                     <div className="flex justify-between items-end pt-2 border-t border-blue-100">
                       <div>
                         <p className="text-[10px] text-blue-600 font-bold uppercase">ખરીદ કિંમત (Cost)</p>
@@ -2095,6 +2164,16 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                       <div className="text-right">
                         <p className="text-[10px] text-purple-600 font-bold uppercase">ઓર્ડર</p>
                         <p className="text-lg font-black text-purple-700">{getSalesReport('month').orderCount}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-purple-100">
+                      <div>
+                        <p className="text-[9px] text-purple-600 font-bold uppercase opacity-70">વસ્તુઓ (Products)</p>
+                        <p className="text-xs font-black text-purple-700">{formatINR(getSalesReport('month').totalRevenue - getSalesReport('month').totalDeliveryIncome + getSalesReport('month').totalDiscount)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] text-purple-600 font-bold uppercase opacity-70">ડિલિવરી (Delivery)</p>
+                        <p className="text-xs font-black text-purple-700">{formatINR(getSalesReport('month').totalDeliveryIncome)}</p>
                       </div>
                     </div>
                     <div className="flex justify-between items-end pt-2 border-t border-purple-100">

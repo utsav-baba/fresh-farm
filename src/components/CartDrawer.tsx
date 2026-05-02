@@ -413,6 +413,7 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
         name_en: item.name_en,
         englishName: item.englishName || '',
         price: item.selectedPrice,
+        costPrice: item.costPrice || 0, // IMPORTANT: Save costPrice at checkout
         quantity: item.quantity,
         unit: item.selectedUnit
       }));

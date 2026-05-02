@@ -117,6 +117,7 @@ export interface CartItem {
   selectedUnit: string;
   selectedPrice: number;
   originalPrice?: number;
+  costPrice?: number;
   quantity: number;
 }
 

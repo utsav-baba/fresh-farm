@@ -37,6 +37,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         selectedUnit: option.unit,
         selectedPrice: (option.discountPrice && option.discountPrice > 0 && option.discountPrice < option.price) ? option.discountPrice : option.price,
         originalPrice: (option.discountPrice && option.discountPrice > 0 && option.discountPrice < option.price) ? option.price : undefined,
+        costPrice: option.costPrice || 0,
         quantity: 1
       }];
     });
