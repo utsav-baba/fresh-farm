@@ -1144,40 +1144,40 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
           
           <div className="h-10 w-[1px] bg-white/10 mx-2 hidden lg:block" />
 
-          <div className="flex bg-white/5 p-1.5 rounded-[24px] border border-white/10 backdrop-blur-md overflow-x-auto no-scrollbar max-w-full">
+          <div className="flex flex-wrap justify-center lg:flex-nowrap bg-white/5 p-1.5 rounded-[24px] lg:rounded-[32px] border border-white/10 backdrop-blur-md overflow-hidden max-w-full gap-1">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'dashboard' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.dashboard}
             </button>
             <button
               onClick={() => setActiveTab('vegetables')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'vegetables' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'vegetables' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.vegetables}
             </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'orders' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'orders' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.orders} ({orders.length})
             </button>
             <button
               onClick={() => setActiveTab('users')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'users' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.users} ({users.length})
             </button>
             <button
               onClick={() => setActiveTab('reports')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px) font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'reports' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'reports' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.reports}
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'settings' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.settings}
             </button>
@@ -1359,7 +1359,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[10px] font-black text-slate-600 mb-1">નામ PRIMARY (GUJARATI)</label>
                         <input
@@ -1368,16 +1368,6 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                           onChange={(e) => setFormData({ ...formData, name: e.target.value, name_gu: e.target.value })}
                           className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 gu"
                           placeholder="દા.ત. બટાકા"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-600 mb-1">HINDI NAME</label>
-                        <input
-                          type="text"
-                          value={formData.name_hi || ''}
-                          onChange={(e) => setFormData({ ...formData, name_hi: e.target.value })}
-                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-                          placeholder="हिन्दी नाम"
                         />
                       </div>
                       <div>
@@ -1392,35 +1382,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                       <div>
-                        <label className="block text-[10px] font-black text-slate-600 mb-1">GUJARATI DESCR.</label>
-                        <textarea
-                          value={formData.description_gu || formData.description || ''}
-                          onChange={(e) => setFormData({ ...formData, description_gu: e.target.value, description: e.target.value })}
-                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-xs gu"
-                          placeholder="ગુજરાતી વર્ણન"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-600 mb-1">HINDI DESCR.</label>
-                        <textarea
-                          value={formData.description_hi || ''}
-                          onChange={(e) => setFormData({ ...formData, description_hi: e.target.value })}
-                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-xs"
-                          placeholder="हिन्दी वर्णन"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-600 mb-1">ENGLISH DESCR.</label>
-                        <textarea
-                          value={formData.description_en || ''}
-                          onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
-                          className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-xs"
-                          placeholder="English Description"
-                        />
-                      </div>
-                    </div>
+
 
                     <div>
                       <label className="block text-sm font-medium text-slate-600 mb-1">વિભાગ (Category)</label>

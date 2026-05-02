@@ -500,7 +500,7 @@ function AppContent({
           </div>
 
           <div className="space-y-3">
-            {(['en', 'gu', 'hi'] as Language[]).map((lang) => (
+            {(['en', 'gu'] as Language[]).map((lang) => (
               <motion.button
                 key={lang}
                 whileHover={{ scale: 1.02 }}
@@ -521,7 +521,7 @@ function AppContent({
                     {translations[lang].languageNames[lang]}
                   </span>
                   <span className={`text-[10px] uppercase font-bold tracking-widest ${language === lang ? 'text-white/40' : 'text-farm-muted'}`}>
-                    {lang === 'en' ? 'English' : lang === 'gu' ? 'Gujarati' : 'Hindi'}
+                    {lang === 'en' ? 'English' : 'Gujarati'}
                   </span>
                 </div>
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
@@ -886,6 +886,33 @@ function AppContent({
         <div className="fixed bottom-24 left-6 w-96 max-w-[calc(100vw-3rem)] h-[500px] z-[200]">
           <Chatbot onClose={() => setIsChatOpen(false)} />
         </div>
+      )}
+
+      {totalItems > 0 && !isCartOpen && (
+        <motion.div
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          className="fixed bottom-20 sm:bottom-4 left-4 right-4 z-[45] flex justify-center pointer-events-none"
+        >
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="w-full max-w-sm bg-farm-g1 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between border border-farm-g3/30 pointer-events-auto group active:scale-95 transition-transform"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-farm-s2 p-2 rounded-xl text-farm-g1">
+                <ShoppingBag className="h-5 w-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] font-black text-farm-s2 uppercase tracking-[0.2em]">{totalItems} {t.navCart}</p>
+                <p className="text-sm font-black italic font-syne uppercase tracking-tight">{t.buyNow || 'BUY NOW'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl group-hover:bg-white/20 transition-colors">
+               <span className="text-xl font-black font-syne italic">{formatINR(cart.reduce((sum, item) => sum + (item.selectedPrice * item.quantity), 0))}</span>
+               <ChevronRight className="h-5 w-5 text-farm-s2" />
+            </div>
+          </button>
+        </motion.div>
       )}
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} settings={settings} vegetables={vegetables} profile={profile} language={language} t={t} />

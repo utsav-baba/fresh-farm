@@ -144,14 +144,19 @@ export function Home({
     };
   }, [externalSettings, externalVegetables]);
 
-  const filteredVegetables = vegetables.filter(v => {
-    const term = searchTerm.trim().toLowerCase();
-    const matchesSearch = v.name.toLowerCase().includes(term) ||
-                         v.englishName?.toLowerCase().includes(term) ||
-                         v.description?.toLowerCase().includes(term);
-    const matchesCategory = selectedCategory === 'all' || v.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredVegetables = vegetables
+    .filter(v => {
+      const term = searchTerm.trim().toLowerCase();
+      const matchesSearch = v.name.toLowerCase().includes(term) ||
+                           v.englishName?.toLowerCase().includes(term) ||
+                           v.description?.toLowerCase().includes(term);
+      const matchesCategory = selectedCategory === 'all' || v.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (a.inStock === b.inStock) return 0;
+      return a.inStock ? -1 : 1;
+    });
 
   if (settings && settings.isShopOpen === false && profile?.role !== 'admin') {
     return (
@@ -463,7 +468,7 @@ export function Home({
 
       {filteredVegetables.length === 0 && (
         <div className="text-center py-20 bg-white/50 rounded-3xl border-2 border-dashed border-farm-border mx-2">
-          <p className="text-farm-muted font-bold gu">{language === 'gu' ? 'કોઈ શાકભાજી મળ્યા નથી.' : language === 'hi' ? 'कोई सब्जी नहीं मिली।' : 'No vegetables found.'}</p>
+          <p className="text-farm-muted font-bold gu">{language === 'gu' ? 'કોઈ શાકભાજી મળ્યા નથી.' : 'No vegetables found.'}</p>
         </div>
       )}
 
