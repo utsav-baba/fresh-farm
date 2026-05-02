@@ -79,7 +79,10 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('preferred_language');
-    return (saved as Language) || 'gu';
+    if (saved === 'hi' || !saved || (saved !== 'en' && saved !== 'gu')) {
+      return 'gu';
+    }
+    return saved as Language;
   });
   const [showLanguageSelection, setShowLanguageSelection] = useState(() => {
     return !localStorage.getItem('preferred_language');

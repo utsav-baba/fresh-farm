@@ -207,8 +207,8 @@ export function Home({
           </div>
           
           <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom duration-700 delay-100">
-            {language === 'gu' ? 'તાજા' : language === 'hi' ? 'ताजी' : 'Fresh'} <span className="text-farm-s2"> {language === 'gu' ? 'શાકભાજી' : language === 'hi' ? 'सब्जियां' : 'Vegetables'}</span><br />
-            <span className="text-2xl sm:text-3xl font-bold opacity-90 tracking-tight">{language === 'gu' ? 'સીધા તમારા ઘરે!' : language === 'hi' ? 'सीधे आपके घर!' : 'Directly to you!'}</span>
+            {language === 'gu' ? 'તાજા' : 'Fresh'} <span className="text-farm-s2"> {language === 'gu' ? 'શાકભાજી' : 'Vegetables'}</span><br />
+            <span className="text-2xl sm:text-3xl font-bold opacity-90 tracking-tight">{language === 'gu' ? 'સીધા તમારા ઘરે!' : 'Directly to you!'}</span>
           </h1>
           
           <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom duration-700 delay-200">
@@ -376,7 +376,7 @@ export function Home({
               <div className="p-4 pt-0 flex-1 flex flex-col">
                 <div className="mb-3">
                   <h3 className={`text-sm font-black leading-tight ${language === 'gu' ? 'gu' : ''} ${(!veg.inStock || (veg.totalStock || 0) <= 0) ? 'text-slate-400' : 'text-farm-g1'}`}>
-                    {language === 'gu' ? (veg.name_gu || veg.name) : language === 'hi' ? (veg.name_hi || veg.name) : (veg.name_en || veg.englishName || veg.name)}
+                    {language === 'gu' ? (veg.name_gu || veg.name) : (veg.name_en || veg.englishName || veg.name)}
                   </h3>
                   {veg.englishName && <p className="text-[9px] text-farm-muted font-bold uppercase tracking-[0.1em]">{veg.englishName}</p>}
                 </div>
@@ -518,10 +518,10 @@ function ProductDetailModal({ veg, onClose, addToCart, updateQuantity, cart, get
                  <span className="bg-farm-g1/5 text-farm-g1 text-[10px] font-black px-3 py-1 rounded-full border border-farm-border">✨ FARM FRESH</span>
               </div>
               <h2 className={`text-3xl font-black text-farm-g1 font-syne mb-1 italic ${language === 'gu' ? 'gu' : ''}`}>
-                {language === 'gu' ? (veg.name_gu || veg.name) : language === 'hi' ? (veg.name_hi || veg.name) : (veg.name_en || veg.englishName || veg.name)}
+                {language === 'gu' ? (veg.name_gu || veg.name) : (veg.name_en || veg.englishName || veg.name)}
               </h2>
               <p className={`text-farm-muted font-bold text-lg mb-4 ${language === 'gu' ? 'gu' : ''}`}>
-                {language === 'gu' ? (veg.description_gu || veg.description) : language === 'hi' ? (veg.description_hi || veg.description) : (veg.description_en || veg.description)}
+                {language === 'gu' ? (veg.description_gu || veg.description) : (veg.description_en || veg.description)}
               </p>
            </div>
 

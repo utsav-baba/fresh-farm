@@ -1144,40 +1144,40 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
           
           <div className="h-10 w-[1px] bg-white/10 mx-2 hidden lg:block" />
 
-          <div className="flex flex-wrap justify-center lg:flex-nowrap bg-white/5 p-1.5 rounded-[24px] lg:rounded-[32px] border border-white/10 backdrop-blur-md overflow-hidden max-w-full gap-1">
+          <div className="flex bg-white/5 p-1.5 rounded-[24px] lg:rounded-[32px] border border-white/10 backdrop-blur-md overflow-x-auto no-scrollbar max-w-full gap-1">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'dashboard' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.dashboard}
             </button>
             <button
               onClick={() => setActiveTab('vegetables')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'vegetables' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'vegetables' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.vegetables}
             </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'orders' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'orders' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.orders} ({orders.length})
             </button>
             <button
               onClick={() => setActiveTab('users')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'users' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.users} ({users.length})
             </button>
             <button
               onClick={() => setActiveTab('reports')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'reports' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'reports' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.reports}
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-grow lg:flex-grow-0 ${activeTab === 'settings' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
             >
               {t.settings}
             </button>
@@ -1625,14 +1625,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-1">વર્ણન</label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 h-24"
-                    />
-                  </div>
+                  {/* Description removed as requested */}
                 </div>
               </div>
 
