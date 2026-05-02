@@ -1133,54 +1133,56 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 relative z-10">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-6 relative z-10 w-full lg:w-auto">
           <button
             onClick={logout}
-            className="flex items-center gap-3 px-6 py-3 bg-red-500/10 text-red-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all border border-red-500/20 group"
+            className="flex items-center justify-center gap-3 px-6 py-3 bg-red-500/10 text-red-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all border border-red-500/20 group shrink-0"
           >
             <LogOut className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
             {t.logout}
           </button>
           
-          <div className="h-10 w-[1px] bg-white/10 mx-2 hidden lg:block" />
+          <div className="h-10 w-[1px] bg-white/10 mx-2 hidden lg:block shrink-0" />
 
-          <div className="flex bg-white/5 p-1.5 rounded-[24px] lg:rounded-[32px] border border-white/10 backdrop-blur-md overflow-x-auto no-scrollbar max-w-full gap-1">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-            >
-              {t.dashboard}
-            </button>
-            <button
-              onClick={() => setActiveTab('vegetables')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'vegetables' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-            >
-              {t.vegetables}
-            </button>
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'orders' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-            >
-              {t.orders} ({orders.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'users' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-            >
-              {t.users} ({users.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('reports')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'reports' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-            >
-              {t.reports}
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`px-4 lg:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-            >
-              {t.settings}
-            </button>
+          <div className="w-full lg:w-auto">
+            <div className="flex flex-nowrap bg-white/5 p-1.5 rounded-[24px] lg:rounded-[32px] border border-white/10 backdrop-blur-md overflow-x-auto no-scrollbar gap-1">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'dashboard' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                📊 {t.dashboard}
+              </button>
+              <button
+                onClick={() => setActiveTab('vegetables')}
+                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'vegetables' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                🥦 {t.vegetables}
+              </button>
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'orders' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                📦 {t.orders} ({orders.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'users' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                👥 {t.users} ({users.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('reports')}
+                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'reports' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                📈 {t.reports}
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'settings' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                ⚙️ {t.settings}
+              </button>
+            </div>
           </div>
         </div>
       </div>

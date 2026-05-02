@@ -1,6 +1,6 @@
 {
-  "name": "Kisan Mandi",
-  "short_name": "KisanMandi",
+  "name": "Fresh Farm",
+  "short_name": "FreshFarm",
   "description": "Fresh Vegetables and Grocery Delivery",
   "start_url": "/",
   "display": "standalone",
@@ -8,12 +8,12 @@
   "theme_color": "#16a34a",
   "icons": [
     {
-      "src": "https://picsum.photos/seed/kisan/192/192",
+      "src": "https://picsum.photos/seed/freshfarm/192/192",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://picsum.photos/seed/kisan/512/512",
+      "src": "https://picsum.photos/seed/freshfarm/512/512",
       "sizes": "512x512",
       "type": "image/png"
     }
