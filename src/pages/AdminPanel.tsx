@@ -146,6 +146,8 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [orderDeleteConfirm, setOrderDeleteConfirm] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
+  const [userFormData, setUserFormData] = useState<Partial<UserProfile>>({});
 
   const handleDeleteAllOrders = async () => {
     if (!orderDeleteConfirm) {
@@ -1062,6 +1064,32 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
     }
   };
 
+  const handleUpdateUserProfile = async () => {
+    if (!userToEdit) return;
+    setLoading(true);
+    try {
+      const userRef = doc(db, 'profiles', userToEdit.uid);
+      const updateData = {
+        firstName: userFormData.firstName || '',
+        lastName: userFormData.lastName || '',
+        phone: userFormData.phone || '',
+        address: userFormData.address || '',
+        email: userFormData.email || '',
+        role: userFormData.role || 'user',
+        updated_at: serverTimestamp()
+      };
+      
+      await updateDoc(userRef, updateData);
+      setSuccess('વપરાશકર્તા વિગતો સફળતાપૂર્વક અપડેટ કરવામાં આવી!');
+      setUserToEdit(null);
+    } catch (err: any) {
+      console.error('Error updating user profile:', err);
+      setError('વપરાશકર્તા વિગતો અપડેટ કરવામાં કંઈક ભૂલ થઈ.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleUpdateUserRole = async (uid: string, newRole: 'admin' | 'user') => {
     if (uid === profile?.uid) {
       setError('તમે તમારી પોતાની ભૂમિકા બદલી શકતા નથી.');
@@ -1854,7 +1882,118 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
       )}
 
       {activeTab === 'users' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="space-y-6">
+          {/* User Edit Modal */}
+          {userToEdit && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+              <div className="bg-white rounded-[32px] w-full max-w-xl shadow-2xl overflow-hidden border border-slate-100">
+                <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-800 font-syne uppercase tracking-tight">વપરાશકર્તા વિગતો</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">ID: {userToEdit.uid}</p>
+                  </div>
+                  <button onClick={() => setUserToEdit(null)} className="p-3 hover:bg-white rounded-2xl transition-all shadow-sm">
+                    <X className="h-6 w-6 text-slate-400" />
+                  </button>
+                </div>
+                
+                <div className="p-8 space-y-6 overflow-y-auto max-h-[70vh]">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">પ્રથમ નામ (First Name)</label>
+                      <input
+                        type="text"
+                        value={userFormData.firstName || ''}
+                        onChange={(e) => setUserFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">અટક (Last Name)</label>
+                      <input
+                        type="text"
+                        value={userFormData.lastName || ''}
+                        onChange={(e) => setUserFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">મોબાઈલ નંબર (Phone)</label>
+                    <input
+                      type="text"
+                      value={userFormData.phone || ''}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ઈમેઈલ (Email)</label>
+                    <input
+                      type="email"
+                      value={userFormData.email || ''}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">સરનામું (Address)</label>
+                    <textarea
+                      value={userFormData.address || ''}
+                      onChange={(e) => setUserFormData(prev => ({ ...prev, address: e.target.value }))}
+                      rows={3}
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ભૂમિકા (Role)</label>
+                    <div className="flex gap-4">
+                      {['user', 'admin'].map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => setUserFormData(prev => ({ ...prev, role: r as any }))}
+                          disabled={userToEdit.uid === profile?.uid}
+                          className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border ${
+                            userFormData.role === r 
+                              ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-200' 
+                              : 'bg-slate-50 text-slate-400 border-slate-100 hover:border-slate-200'
+                          } ${userToEdit.uid === profile?.uid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                    {userToEdit.uid === profile?.uid && (
+                      <p className="text-[9px] text-red-400 font-bold uppercase mt-2">* તમે તમારી પોતાની ભૂમિકા બદલી શકતા નથી</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex gap-4">
+                  <button
+                    onClick={() => setUserToEdit(null)}
+                    className="flex-1 py-4 px-6 bg-white text-slate-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-200"
+                  >
+                    રદ કરો
+                  </button>
+                  <button
+                    onClick={handleUpdateUserProfile}
+                    disabled={loading}
+                    className="flex-[2] py-4 px-6 bg-green-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-green-700 transition-all shadow-xl shadow-green-200 flex items-center justify-center gap-2"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    સાચવો (Save Changes)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
               <Users className="h-6 w-6 text-green-600" />
@@ -1894,14 +2033,21 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                     );
                   })
                   .map((u) => (
-                  <tr key={u.uid} className="hover:bg-slate-50/50 transition-colors">
+                  <tr 
+                    key={u.uid} 
+                    className="hover:bg-green-50/50 transition-colors cursor-pointer group"
+                    onClick={() => {
+                      setUserToEdit(u);
+                      setUserFormData({ ...u });
+                    }}
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${u.phone ? 'bg-green-100' : 'bg-slate-100'}`}>
+                        <div className={`p-2 rounded-full transition-colors ${u.phone ? 'bg-green-100 group-hover:bg-green-200' : 'bg-slate-100 group-hover:bg-slate-200'}`}>
                           {u.phone ? <Phone className="h-4 w-4 text-green-600" /> : <Mail className="h-4 w-4 text-slate-500" />}
                         </div>
                         <div>
-                          <div className="font-black text-slate-800 text-sm whitespace-nowrap">
+                          <div className="font-black text-slate-800 text-sm whitespace-nowrap group-hover:text-green-700 transition-colors">
                             {u.phone ? `+91 ${u.phone}` : u.email || 'No Identity'}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono uppercase tracking-tighter">ID: {u.uid.slice(0, 8)}...</div>
@@ -1913,7 +2059,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col min-w-[150px]">
-                        <div className="font-bold text-slate-700 text-xs whitespace-nowrap">
+                        <div className="font-bold text-slate-700 text-xs whitespace-nowrap group-hover:text-green-700 transition-colors">
                           {u.firstName} {u.lastName}
                         </div>
                         <div className="text-[10px] text-slate-400 line-clamp-1 italic">
@@ -1924,25 +2070,30 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <Shield className={`h-4 w-4 ${u.role === 'admin' ? 'text-green-600' : 'text-slate-400'}`} />
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleUpdateUserRole(u.uid, e.target.value as 'admin' | 'user')}
-                          disabled={u.uid === profile?.uid}
-                          className="text-sm border border-slate-200 rounded-lg p-1 outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                        >
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'text-green-600' : 'text-slate-400'}`}>
+                          {u.role}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleDeleteUser(u.uid)}
-                        disabled={u.uid === profile?.uid}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-30"
-                      >
-                        <UserMinus className="h-4 w-4" />
-                      </button>
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setUserToEdit(u);
+                            setUserFormData({ ...u });
+                          }}
+                          className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setUserDeleteConfirm(u.uid)}
+                          disabled={u.uid === profile?.uid}
+                          className={`p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all ${u.uid === profile?.uid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1950,7 +2101,8 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
             </table>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {activeTab === 'reports' && (
         <div className="space-y-8">
