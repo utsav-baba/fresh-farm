@@ -24,6 +24,7 @@ import { AdminPanel } from './pages/AdminPanel';
 import { MyOrders } from './pages/MyOrders';
 import { Chatbot } from './components/Chatbot';
 import { CartDrawer } from './components/CartDrawer';
+import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { RollingVeg } from './components/RollingVeg';
 import { CartProvider, useCart } from './context/CartContext';
 import { LogIn, LogOut, ShieldCheck, ShoppingBasket, MessageCircle, AlertTriangle, ShoppingCart, User as UserIcon, MapPin, Save, Loader2, CheckCircle, ShoppingBag, Mail, Phone, ChevronRight, Package, X, Settings } from 'lucide-react';
@@ -919,6 +920,7 @@ function AppContent({
       )}
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} settings={settings} vegetables={vegetables} profile={profile} language={language} t={t} />
+      <InstallPwaPrompt user={user} profile={profile} />
     </div>
   );
 }
@@ -1120,12 +1122,21 @@ function SignupScreen({ user, phoneNumber, onCancel, setLoginStep, t, onComplete
       console.error("Signup error", err);
       if (err.code === 'auth/operation-not-allowed') {
         setSignupError("Email/Password login is not enabled in Firebase Console. Please enable it.");
-      } else if (err.code === 'auth/email-already-in-use' || err.message?.includes('already-in-use')) {
+      } else if (
+        err.code === 'auth/email-already-in-use' || 
+        err.code === 'email-already-in-use' ||
+        (err.message && (
+          err.message.includes('already-in-use') || 
+          err.message.includes('already registered') ||
+          err.message.includes('email-already-in-use') ||
+          err.message.includes('(auth/email-already-in-use)')
+        ))
+      ) {
         setSignupError("This phone number is already registered. Switching to login...");
         // Redirect to password step since they already exist
         setTimeout(() => {
           setLoginStep('password');
-        }, 1500);
+        }, 2000);
       } else if (err.code === 'auth/invalid-email') {
         setSignupError("Invalid phone format for registration.");
       } else {
