@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useCart } from '../context/CartContext';
-import { X, Minus, Plus, Trash2, ShoppingBag, Truck, CheckCircle, CreditCard, MapPin, Phone, User, ChevronRight, AlertCircle, Clock, Search } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, Truck, CheckCircle, CreditCard, MapPin, Phone, User, ChevronRight, AlertCircle, Clock, Search, Star } from 'lucide-react';
 import { formatINR, calculateDistance, getRoadDistance, getCoordsFromAddress, getUnitMultiplier } from '../lib/utils';
 import { auth, db } from '../lib/firebase';
 import { useToast } from '../context/ToastContext';
@@ -11,7 +11,7 @@ import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegetables, profile: externalProfile, language, t }: { isOpen: boolean, onClose: () => void, settings: AppSettings | null, vegetables?: Vegetable[], profile?: UserProfile | null, language: string, t: any }) {
-  const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart } = useCart();
+  const { cart, removeFromCart, updateQuantity, totalPrice, totalItems, clearCart, freeItem } = useCart();
   const { showToast } = useToast();
 
   const getVegWeightInCart = (vegId: string) => {
@@ -418,6 +418,21 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
         unit: item.selectedUnit
       }));
 
+      // Add free item from deal if eligible
+      if (freeItem) {
+        orderItems.push({
+          vegId: 'free-item-deal',
+          name: freeItem.name,
+          name_gu: freeItem.name_gu || freeItem.name,
+          name_en: freeItem.name_en || freeItem.name,
+          englishName: freeItem.englishName || freeItem.name,
+          price: 0,
+          costPrice: 0,
+          quantity: 1,
+          unit: freeItem.selectedUnit
+        });
+      }
+
       // Generate a unique invoice number using timestamp
       const nextInvoiceNumber = Date.now().toString().slice(-6);
       const ordersRef = collection(db, 'orders');
@@ -755,6 +770,50 @@ export function CartDrawer({ isOpen, onClose, settings: externalSettings, vegeta
                       </div>
                     </div>
                   ))}
+
+                  {freeItem && (
+                    <div className="flex gap-4 items-center bg-farm-g4/5 p-4 rounded-[24px] border-2 border-dashed border-farm-g4/30 animate-in zoom-in-95 duration-500 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-2 bg-farm-g4 text-white text-[8px] font-black uppercase tracking-widest rounded-bl-xl shadow-lg z-10 flex items-center gap-1">
+                        <Star className="h-2 w-2 fill-white" />
+                        Free Gift
+                      </div>
+                      <div className="w-20 h-20 bg-white rounded-[18px] overflow-hidden flex items-center justify-center p-2 relative shadow-inner">
+                         {freeItem.imageUrl ? (
+                           <img
+                             src={freeItem.imageUrl}
+                             alt={freeItem.name}
+                             className="w-full h-full object-cover rounded-lg group-hover:scale-110 transition-transform duration-500"
+                           />
+                         ) : (
+                           <span className="text-3xl">🎁</span>
+                         )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="mb-1">
+                          <h3 className={`font-black text-farm-g4 leading-tight text-sm ${language === 'gu' ? 'gu' : ''}`}>
+                            {freeItem.name}
+                          </h3>
+                          <span className="text-[9px] text-farm-g4/60 font-bold uppercase tracking-widest">LOYALTY REWARD</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-farm-g4">FREE</span>
+                            {freeItem.originalPrice ? (
+                              <span className="text-[10px] text-farm-muted line-through">{formatINR(freeItem.originalPrice)}</span>
+                            ) : (
+                              <span className="text-[10px] text-farm-muted line-through">Calculated at Checkout</span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-farm-muted">Quantity: 1 • {freeItem.selectedUnit}</span>
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col items-end pr-2">
+                        <div className="w-8 h-8 bg-farm-g4/10 rounded-full flex items-center justify-center">
+                          <CheckCircle className="h-4 w-4 text-farm-g4" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

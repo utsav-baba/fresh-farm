@@ -52,6 +52,13 @@ export interface AppSettings {
   homepageDealSub?: string;
   homepageDealCode?: string;
   deliverySlots?: string[]; // e.g. ["09:00 AM - 11:00 AM", "05:00 PM - 07:00 PM"]
+  freeItemThreshold?: number;
+  freeItemName?: string;
+  freeItemImage?: string;
+  freeItemWeight?: string;
+  freeItemDescription?: string;
+  freeItemMRP?: number;
+  isFreeItemActive?: boolean;
   updatedAt?: any;
 }
 

@@ -40,7 +40,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'vegetables' | 'orders' | 'users' | 'settings' | 'reports'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'vegetables' | 'orders' | 'users' | 'settings' | 'reports' | 'deals'>('dashboard');
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
@@ -142,8 +142,10 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
   // Image upload states
   const [uploading, setUploading] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingDealsFile, setPendingDealsFile] = useState<File | null>(null);
   const [newStockAddition, setNewStockAddition] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dealsFileInputRef = useRef<HTMLInputElement>(null);
 
   const [orderDeleteConfirm, setOrderDeleteConfirm] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
@@ -260,6 +262,13 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
             homepageDealTitle: data.homepage_deal_title || data.homepageDealTitle || '',
             homepageDealSub: data.homepage_deal_sub || data.homepageDealSub || '',
             homepageDealCode: data.homepage_deal_code || data.homepageDealCode || '',
+            freeItemThreshold: data.free_item_threshold || data.freeItemThreshold || 0,
+            freeItemName: data.free_item_name || data.freeItemName || '',
+            freeItemImage: data.free_item_image || data.freeItemImage || '',
+            freeItemWeight: data.free_item_weight || data.freeItemWeight || '',
+            freeItemDescription: data.free_item_description || data.freeItemDescription || '',
+            freeItemMRP: data.free_item_mrp || data.freeItemMRP || 0,
+            isFreeItemActive: data.is_free_item_active ?? data.isFreeItemActive ?? false,
             deliverySlots: data.delivery_slots || data.deliverySlots || [],
             updatedAt: data.updated_at?.toDate?.()?.toISOString() || data.updated_at || new Date().toISOString()
           } as AppSettings;
@@ -501,6 +510,23 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData({ ...formData, imageUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDealsFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError('ફોટો ૧૦ MB થી ઓછો હોવો જોઈએ.');
+        return;
+      }
+      setPendingDealsFile(file);
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettingsForm(prev => prev ? { ...prev, freeItemImage: reader.result as string } : null);
       };
       reader.readAsDataURL(file);
     }
@@ -805,6 +831,29 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
     try {
       const settingsRef = doc(db, 'settings', 'global');
       const updateData: any = {};
+      let uploadHappened = false;
+
+      if (pendingDealsFile) {
+        setUploading(true);
+        const fileExt = pendingDealsFile.name.split('.').pop();
+        const fileName = `deal_${Date.now()}.${fileExt}`;
+        const filePath = `settings/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('vegetables') // reusing same bucket
+          .upload(filePath, pendingDealsFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('vegetables')
+          .getPublicUrl(filePath);
+
+        updateData.free_item_image = publicUrl;
+        setPendingDealsFile(null);
+        setUploading(false);
+        uploadHappened = true;
+      }
       
       if (newSettings.freeDeliveryDistance !== undefined) updateData.free_delivery_distance = newSettings.freeDeliveryDistance;
       if (newSettings.freeDeliveryThreshold !== undefined) updateData.free_delivery_threshold = newSettings.freeDeliveryThreshold;
@@ -821,6 +870,13 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
       if (newSettings.homepageDealSub !== undefined) updateData.homepage_deal_sub = newSettings.homepageDealSub;
       if (newSettings.homepageDealCode !== undefined) updateData.homepage_deal_code = newSettings.homepageDealCode;
       if (newSettings.deliverySlots !== undefined) updateData.delivery_slots = newSettings.deliverySlots;
+      if (newSettings.freeItemThreshold !== undefined) updateData.free_item_threshold = newSettings.freeItemThreshold;
+      if (newSettings.freeItemName !== undefined) updateData.free_item_name = newSettings.freeItemName;
+      if (newSettings.freeItemImage !== undefined && !uploadHappened) updateData.free_item_image = newSettings.freeItemImage;
+      if (newSettings.freeItemWeight !== undefined) updateData.free_item_weight = newSettings.freeItemWeight;
+      if (newSettings.freeItemDescription !== undefined) updateData.free_item_description = newSettings.freeItemDescription;
+      if (newSettings.freeItemMRP !== undefined) updateData.free_item_mrp = newSettings.freeItemMRP;
+      if (newSettings.isFreeItemActive !== undefined) updateData.is_free_item_active = newSettings.isFreeItemActive;
       
       updateData.updated_at = serverTimestamp();
       
@@ -1233,6 +1289,12 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                 className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'reports' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
               >
                 📈 {t.reports}
+              </button>
+              <button
+                onClick={() => setActiveTab('deals')}
+                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 ${activeTab === 'deals' ? 'bg-farm-s2 text-farm-g1 shadow-xl scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                🏷️ {t.deals || 'ડીલ્સ (Deals)'}
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -2416,6 +2478,262 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
         </div>
       )}
 
+      {activeTab === 'deals' && (
+        <div className="bg-white p-8 rounded-[32px] border border-farm-border shadow-farm-card animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="flex items-center justify-between mb-8 pb-6 border-b border-farm-border">
+            <div className="flex items-center gap-3 text-farm-g1 font-black text-2xl uppercase tracking-tight font-syne italic">
+              <div className="bg-farm-s2 p-3 rounded-2xl shadow-lg shadow-farm-green/20">
+                <Tag className="h-6 w-6 text-farm-g1" />
+              </div>
+              ડીલ્સ અને ઓફર્સ
+            </div>
+            <button
+              onClick={() => settingsForm && handleSettingsSave(settingsForm)}
+              disabled={loading}
+              className="flex items-center gap-2 bg-farm-g1 text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-farm-g1/20 hover:scale-105 transition-all disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              સાચવો (Save Deals)
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            {/* Free Delivery Deals */}
+            <div className="space-y-8">
+              <h3 className="text-sm font-black text-farm-g1 uppercase tracking-[0.2em] relative inline-block">
+                ડિલિવરી ઓફર્સ
+                <div className="absolute -bottom-2 left-0 w-1/2 h-1 bg-farm-s2 rounded-full" />
+              </h3>
+              
+              <div className="grid grid-cols-1 gap-6">
+                <div className="p-6 bg-slate-50 rounded-[28px] border border-slate-100 group hover:border-farm-s2/30 transition-all">
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-farm-s2" />
+                    ફ્રી ડિલિવરી અંતર (કિમી)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={settingsForm?.freeDeliveryDistance ?? ''}
+                      onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeDeliveryDistance: e.target.value === '' ? 0 : Number(e.target.value) } : null)}
+                      className="w-full p-4 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-farm-s2/10 focus:border-farm-s2 bg-white font-black text-xl text-farm-g1 transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase tracking-widest">KM</span>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-green-50/30 rounded-[28px] border border-green-100 group hover:border-green-200 transition-all">
+                  <label className="block text-[10px] font-black text-green-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 text-green-600" />
+                    ફ્રી ડિલિવરી ઓર્ડર રકમ (₹)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={settingsForm?.freeDeliveryThreshold ?? ''}
+                      onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeDeliveryThreshold: e.target.value === '' ? 0 : Number(e.target.value) } : null)}
+                      className="w-full p-4 border border-green-200 rounded-2xl outline-none focus:ring-4 focus:ring-green-500/10 focus:border-green-500 bg-white font-black text-xl text-green-700 transition-all"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-green-200 uppercase tracking-widest">INR</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Free Item Deal */}
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-farm-g1 uppercase tracking-[0.2em] relative inline-block flex items-center gap-2">
+                  <Star className="h-4 w-4 text-farm-s1 fill-farm-s1" />
+                  ફ્રી ગિફ્ટ ઓફર (Free Item)
+                  <div className="absolute -bottom-2 left-0 w-1/2 h-1 bg-farm-s2 rounded-full" />
+                </h3>
+                <div className="flex items-center gap-3">
+                  <span className={`text-[9px] font-black uppercase ${settingsForm?.isFreeItemActive ? 'text-green-600' : 'text-slate-400'}`}>
+                    {settingsForm?.isFreeItemActive ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                  <button 
+                    onClick={() => setSettingsForm(prev => prev ? { ...prev, isFreeItemActive: !prev.isFreeItemActive } : null)}
+                    className={`w-14 h-7 rounded-full p-1 transition-all duration-300 ${settingsForm?.isFreeItemActive ? 'bg-green-500' : 'bg-slate-200'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${settingsForm?.isFreeItemActive ? 'translate-x-7' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-8 bg-farm-cream rounded-[32px] border border-farm-border space-y-6 relative overflow-hidden">
+                <div className="grid grid-cols-1 gap-6">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">ઓર્ડર લિમિટ (Min. Order Amount ₹)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 999"
+                      value={settingsForm?.freeItemThreshold ?? ''}
+                      onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeItemThreshold: e.target.value === '' ? 0 : Number(e.target.value) } : null)}
+                      className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:ring-4 focus:ring-farm-s2/10 focus:border-farm-s2 bg-white font-black text-xl text-farm-g1 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">આઈટમ નામ</label>
+                      <input
+                        type="text"
+                        placeholder="Tea, Sugar, etc."
+                        value={settingsForm?.freeItemName || ''}
+                        onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeItemName: e.target.value } : null)}
+                        className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:border-farm-s2 bg-white font-bold text-sm"
+                      />
+                    </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">વજન/માપ (Weight)</label>
+                      <input
+                        type="text"
+                        placeholder="250g, 1kg, etc."
+                        value={settingsForm?.freeItemWeight || ''}
+                        onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeItemWeight: e.target.value } : null)}
+                        className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:border-farm-s2 bg-white font-bold text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">કિંમત (MRP ₹)</label>
+                      <input
+                        type="number"
+                        placeholder="Worth ₹"
+                        value={settingsForm?.freeItemMRP ?? ''}
+                        onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeItemMRP: e.target.value === '' ? 0 : Number(e.target.value) } : null)}
+                        className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:border-farm-s2 bg-white font-bold text-sm"
+                      />
+                    </div>
+                  </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">આઈટમ ઈમેજ</label>
+                    
+                    <div className="flex items-center gap-6">
+                      <div className="relative w-24 h-24 bg-white rounded-2xl border-2 border-dashed border-farm-border flex items-center justify-center overflow-hidden group">
+                        {settingsForm?.freeItemImage ? (
+                          <>
+                            <img 
+                              src={settingsForm.freeItemImage} 
+                              alt="Free Item" 
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              onClick={() => {
+                                setSettingsForm(prev => prev ? { ...prev, freeItemImage: '' } : null);
+                                setPendingDealsFile(null);
+                                if (dealsFileInputRef.current) dealsFileInputRef.current.value = '';
+                              }}
+                              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </>
+                        ) : (
+                          <div className="text-center">
+                            <ImageIcon className="h-6 w-6 text-slate-300 mx-auto mb-1" />
+                            <span className="text-[8px] font-bold text-slate-400">NO IMAGE</span>
+                          </div>
+                        )}
+                        {uploading && (
+                          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                            <Loader2 className="h-4 w-4 text-farm-green animate-spin" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          ref={dealsFileInputRef}
+                          onChange={handleDealsFileUpload}
+                          className="hidden"
+                          accept="image/*"
+                        />
+                        <button
+                          onClick={() => dealsFileInputRef.current?.click()}
+                          className="flex items-center gap-2 px-4 py-2 bg-white border border-farm-border rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                        >
+                          <Upload className="h-3 w-3" />
+                          ઈમેજ અપલોડ કરો (Upload)
+                        </button>
+                        <p className="text-[8px] text-slate-400 font-bold uppercase mt-2">* PNG, JPG up to 10MB</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Homepage Banner Deal */}
+            <div className="col-span-1 md:col-span-2 space-y-8 mt-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-farm-g1 uppercase tracking-[0.2em] relative inline-block flex items-center gap-2">
+                  <Star className="h-5 w-5 text-farm-s1 fill-farm-s1" />
+                  હોમપેજ ડીલ (Homepage Deal)
+                  <div className="absolute -bottom-2 left-0 w-1/2 h-1 bg-farm-s2 rounded-full" />
+                </h3>
+                <div className="flex items-center gap-3">
+                  <span className={`text-[9px] font-black uppercase ${settingsForm?.showHomepageDeal ? 'text-green-600' : 'text-slate-400'}`}>
+                    {settingsForm?.showHomepageDeal ? 'VISIBLE' : 'HIDDEN'}
+                  </span>
+                  <button 
+                    onClick={() => setSettingsForm(prev => prev ? { ...prev, showHomepageDeal: !prev.showHomepageDeal } : null)}
+                    className={`w-14 h-7 rounded-full p-1 transition-all duration-300 ${settingsForm?.showHomepageDeal ? 'bg-green-500' : 'bg-slate-200'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${settingsForm?.showHomepageDeal ? 'translate-x-7' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-8 bg-[#F4FAF6] rounded-[48px] border border-green-100 shadow-sm relative overflow-hidden">
+                <div className="space-y-8 relative z-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-bold text-farm-muted px-1 uppercase tracking-wider">ડીલ ટાઈટલ</label>
+                       <input 
+                         type="text" 
+                         placeholder="પ્રથમ ઓર્ડર? 20% ઓફ!"
+                         value={settingsForm?.homepageDealTitle || ''}
+                         onChange={(e) => setSettingsForm(prev => prev ? { ...prev, homepageDealTitle: e.target.value } : null)}
+                         className="w-full p-4 border border-slate-100 rounded-2xl font-bold bg-white outline-none focus:ring-2 focus:ring-farm-green/10 focus:border-farm-green shadow-sm text-farm-g1"
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-bold text-farm-muted px-1 uppercase tracking-wider">ડીલ લખાણ</label>
+                       <input 
+                         type="text" 
+                         placeholder="પ્રોમો કોડ વાપરો અને બચત કરો"
+                         value={settingsForm?.homepageDealSub || ''}
+                         onChange={(e) => setSettingsForm(prev => prev ? { ...prev, homepageDealSub: e.target.value } : null)}
+                         className="w-full p-4 border border-slate-100 rounded-2xl font-bold bg-white outline-none focus:ring-2 focus:ring-farm-green/10 focus:border-farm-green shadow-sm text-farm-g1"
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-bold text-farm-muted px-1 uppercase tracking-wider">પ્રોમો કોડ</label>
+                       <input 
+                         type="text" 
+                         placeholder="FRESH20"
+                         value={settingsForm?.homepageDealCode || ''}
+                         onChange={(e) => setSettingsForm(prev => prev ? { ...prev, homepageDealCode: e.target.value } : null)}
+                         className="w-full p-4 border border-slate-100 rounded-2xl font-bold bg-white outline-none focus:ring-2 focus:ring-farm-green/10 focus:border-farm-green shadow-sm text-farm-g1 uppercase tracking-widest"
+                       />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold px-1 items-center gap-2 flex">
+                    <AlertCircle className="h-3 w-3" />
+                    હોમપેજ પર બતાવાતી મુખ્ય ડીલ અહીંથી બદલી શકાશે. ગ્રાહકોને આકર્ષવા માટે આનો ઉપયોગ કરો.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'settings' && (
         <div className="bg-white p-6 rounded-2xl border border-green-100 shadow-sm">
           <div className="flex items-center justify-between mb-6">
@@ -2563,33 +2881,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
               <p className="text-xs text-blue-600 font-medium mt-2">આ લોકેશનથી ગ્રાહકનું અંતર ગણવામાં આવશે. તમે જાતે Lat/Lng નાખી શકો છો અથવા ઉપરના બટનો વાપરી શકો છો.</p>
             </div>
 
-            <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-              <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                <Truck className="h-5 w-5 text-green-600" />
-                ફ્રી ડિલિવરી અંતર (કિમી)
-              </label>
-              <input
-                type="number"
-                value={settingsForm?.freeDeliveryDistance ?? ''}
-                onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeDeliveryDistance: e.target.value === '' ? 0 : Number(e.target.value) } : null)}
-                className="w-full p-3 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm font-bold"
-              />
-              <p className="text-xs text-slate-500">આટલા કિમી સુધી કોઈ ડિલિવરી ચાર્જ લાગશે નહીં.</p>
-            </div>
 
-            <div className="space-y-4 p-4 bg-green-50 rounded-xl border border-green-100">
-              <label className="block text-sm font-bold text-green-800 mb-2 flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5 text-green-600" />
-                ફ્રી ડિલિવરી સ્કીમ (₹)
-              </label>
-              <input
-                type="number"
-                value={settingsForm?.freeDeliveryThreshold ?? ''}
-                onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeDeliveryThreshold: e.target.value === '' ? 0 : Number(e.target.value) } : null)}
-                className="w-full p-3 border border-green-200 rounded-lg outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm font-bold text-green-700"
-              />
-              <p className="text-xs text-green-600 font-medium">જો ઓર્ડર આ રકમથી વધુ હશે, તો ડિલિવરી ફ્રી રહેશે.</p>
-            </div>
 
             <div className="space-y-4 p-4 bg-orange-50 rounded-xl border border-orange-100">
               <label className="block text-sm font-bold text-orange-800 mb-2 flex items-center gap-2">
@@ -2636,57 +2928,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
               <p className="text-xs text-purple-600 font-medium">જો તમે અંતર મુજબ વધારાનો ચાર્જ લેવા માંગતા હોવ (ઓપ્શનલ).</p>
             </div>
 
-            <div className="col-span-1 md:col-span-2 space-y-6 p-6 bg-farm-g4/5 rounded-3xl border border-farm-g4/10">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-black text-farm-g1 flex items-center gap-2">
-                   <Star className="h-6 w-6 text-farm-s1" />
-                   હોમપેજ ડીલ (Homepage Deal)
-                </h3>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={settingsForm?.showHomepageDeal !== false} 
-                    onChange={(e) => setSettingsForm(prev => prev ? { ...prev, showHomepageDeal: e.target.checked } : null)}
-                    className="sr-only peer" 
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-farm-g4" />
-                </label>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-farm-muted px-1 uppercase tracking-wider">ડીલ ટાઈટલ</label>
-                    <input 
-                      type="text" 
-                      placeholder="પ્રથમ ઓર્ડર? 20% ઓફ!"
-                      value={settingsForm?.homepageDealTitle || ''}
-                      onChange={(e) => setSettingsForm(prev => prev ? { ...prev, homepageDealTitle: e.target.value } : null)}
-                      className="w-full p-3 border border-farm-border rounded-xl font-bold bg-white"
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-farm-muted px-1 uppercase tracking-wider">ડીલ લખાણ</label>
-                    <input 
-                      type="text" 
-                      placeholder="પ્રોમો કોડ વાપરો અને બચત કરો"
-                      value={settingsForm?.homepageDealSub || ''}
-                      onChange={(e) => setSettingsForm(prev => prev ? { ...prev, homepageDealSub: e.target.value } : null)}
-                      className="w-full p-3 border border-farm-border rounded-xl font-bold bg-white"
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-farm-muted px-1 uppercase tracking-wider">પ્રોમો કોડ</label>
-                    <input 
-                      type="text" 
-                      placeholder="FRESH20"
-                      value={settingsForm?.homepageDealCode || ''}
-                      onChange={(e) => setSettingsForm(prev => prev ? { ...prev, homepageDealCode: e.target.value } : null)}
-                      className="w-full p-3 border border-farm-border rounded-xl font-bold bg-white uppercase"
-                    />
-                 </div>
-              </div>
-              <p className="text-[10px] text-farm-muted font-bold">હોમપેજ પર બતાવાતી મુખ્ય ડીલ અહીંથી બદલી શકાશે. ગ્રાહકોને આકર્ષવા માટે આનો ઉપયોગ કરો.</p>
-            </div>
 
             <div className="space-y-4 p-4 bg-green-50 rounded-xl border border-green-100">
               <label className="block text-sm font-bold text-green-800 mb-2 flex items-center gap-2">

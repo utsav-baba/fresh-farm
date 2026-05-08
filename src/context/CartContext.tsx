@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CartItem, Vegetable, PricingOption } from '../types';
+import { CartItem, Vegetable, PricingOption, AppSettings } from '../types';
+import { db } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface CartContextType {
   cart: CartItem[];
@@ -9,12 +11,24 @@ interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
+  freeItem: CartItem | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+
+  // Fetch settings for free item deal
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'global'), (doc) => {
+      if (doc.exists()) {
+        setSettings(doc.data() as AppSettings);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const addToCart = (veg: Vegetable, option: PricingOption) => {
     setCart(prev => {
@@ -58,11 +72,41 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => setCart([]);
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce((sum, item) => sum + (item.selectedPrice * item.quantity), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.selectedPrice * item.quantity), 0);
+  
+  // Calculate Free Item based on settings and subtotal
+  const freeItem = React.useMemo(() => {
+    if (!settings?.isFreeItemActive || !settings.freeItemThreshold || subtotal < settings.freeItemThreshold) {
+      return null;
+    }
+    
+    return {
+      id: 'free-item-deal',
+      name: settings.freeItemName || 'Free Gift',
+      name_gu: settings.freeItemName || 'ફ્રી ગિફ્ટ',
+      imageUrl: settings.freeItemImage || '',
+      selectedUnit: settings.freeItemWeight || 'Free',
+      selectedPrice: 0,
+      originalPrice: settings.freeItemMRP || 0,
+      quantity: 1,
+      isFree: true // Flag to identify it's a free item from deal
+    } as CartItem & { isFree: boolean };
+  }, [settings, subtotal]);
+
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0) + (freeItem ? 1 : 0);
+  const totalPrice = subtotal; // Free item adds 0 to total
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice }}>
+    <CartContext.Provider value={{ 
+      cart, 
+      addToCart, 
+      removeFromCart, 
+      updateQuantity, 
+      clearCart, 
+      totalItems, 
+      totalPrice,
+      freeItem 
+    }}>
       {children}
     </CartContext.Provider>
   );
