@@ -2574,9 +2574,9 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">આઈટમ નામ</label>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">આઈટમ નામ (Item Name)</label>
                       <input
                         type="text"
                         placeholder="Tea, Sugar, etc."
@@ -2585,28 +2585,28 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                         className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:border-farm-s2 bg-white font-bold text-sm"
                       />
                     </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">વજન/માપ (Weight)</label>
-                      <input
-                        type="text"
-                        placeholder="250g, 1kg, etc."
-                        value={settingsForm?.freeItemWeight || ''}
-                        onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeItemWeight: e.target.value } : null)}
-                        className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:border-farm-s2 bg-white font-bold text-sm"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">વજન/માપ (Weight)</label>
+                        <input
+                          type="text"
+                          placeholder="250g, 1kg, etc."
+                          value={settingsForm?.freeItemWeight || ''}
+                          onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeItemWeight: e.target.value } : null)}
+                          className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:border-farm-s2 bg-white font-bold text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">કિંમત (MRP ₹)</label>
+                        <input
+                          type="number"
+                          placeholder="Worth ₹"
+                          value={settingsForm?.freeItemMRP ?? ''}
+                          onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeItemMRP: e.target.value === '' ? 0 : Number(e.target.value) } : null)}
+                          className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:border-farm-s2 bg-white font-bold text-sm"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">કિંમત (MRP ₹)</label>
-                      <input
-                        type="number"
-                        placeholder="Worth ₹"
-                        value={settingsForm?.freeItemMRP ?? ''}
-                        onChange={(e) => setSettingsForm(prev => prev ? { ...prev, freeItemMRP: e.target.value === '' ? 0 : Number(e.target.value) } : null)}
-                        className="w-full p-4 border border-farm-border rounded-2xl outline-none focus:border-farm-s2 bg-white font-bold text-sm"
-                      />
-                    </div>
-                  </div>
                   </div>
 
                   <div className="space-y-4">
