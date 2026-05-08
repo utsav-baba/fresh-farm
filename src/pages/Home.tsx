@@ -43,6 +43,11 @@ export function Home({
     setSelectedVegForDetail(veg);
   };
 
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    showToast(language === 'gu' ? 'કોડ કોપી થયો!' : 'Code copied!', 'success');
+  };
+
   const settings = externalSettings || internalSettings;
 
   useEffect(() => {
@@ -114,13 +119,24 @@ export function Home({
             freeDeliveryDistance: data.free_delivery_distance || data.freeDeliveryDistance || 0,
             freeDeliveryThreshold: data.free_delivery_threshold || data.freeDeliveryThreshold || 0,
             deliveryCharge: data.delivery_charge || data.deliveryCharge || 0,
-            whatsappNumber: data.whatsapp_number || data.whatsappNumber,
+            whatsappNumber: data.whatsapp_number || data.whatsappNumber || '',
             isShopOpen: data.is_shop_open ?? data.isShopOpen ?? true,
+            warehouseAddress: data.warehouse_address || data.warehouseAddress || '',
+            warehouseLat: data.warehouse_lat || data.warehouseLat || 23.0225,
+            warehouseLng: data.warehouse_lng || data.warehouseLng || 72.5714,
             showHomepageDeal: data.show_homepage_deal ?? data.showHomepageDeal ?? true,
             homepageDealTitle: data.homepage_deal_title || data.homepageDealTitle || '',
             homepageDealSub: data.homepage_deal_sub || data.homepageDealSub || '',
             homepageDealCode: data.homepage_deal_code || data.homepageDealCode || '',
-            updatedAt: data.updated_at || data.updatedAt
+            freeItemThreshold: data.free_item_threshold || data.freeItemThreshold || 0,
+            freeItemName: data.free_item_name || data.freeItemName || '',
+            freeItemImage: data.free_item_image || data.freeItemImage || '',
+            freeItemWeight: data.free_item_weight || data.freeItemWeight || '',
+            freeItemDescription: data.free_item_description || data.freeItemDescription || '',
+            freeItemMRP: data.free_item_mrp || data.freeItemMRP || 0,
+            isFreeItemActive: data.is_free_item_active ?? data.isFreeItemActive ?? false,
+            deliverySlots: data.delivery_slots || data.deliverySlots || [],
+            updatedAt: data.updated_at?.toDate?.()?.toISOString() || data.updated_at || new Date().toISOString()
           } as AppSettings);
         }
       } catch (err) {
@@ -250,6 +266,46 @@ export function Home({
         </div>
       </div>
 
+      {/* Promo Card */}
+      {settings?.showHomepageDeal !== false && (settings?.homepageDealCode || settings?.homepageDealTitle) && (
+        <div className="px-2 sm:px-0">
+          <div className="bg-gradient-to-tr from-farm-g1 via-farm-g2 to-farm-g1 rounded-[24px] p-6 text-white relative overflow-hidden group cursor-pointer border border-white/5 shadow-lg">
+            <div className="absolute right-[-10px] top-[-10px] text-7xl opacity-10 group-hover:rotate-12 transition-transform duration-500 pointer-events-none">🎊</div>
+            <div className="absolute left-[-20px] bottom-[-20px] w-32 h-32 bg-farm-s2/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="bg-farm-s2 p-1.5 rounded-lg shadow-sm">
+                    <Star className="h-4 w-4 text-farm-g1 fill-current" />
+                  </div>
+                  <span className="text-[10px] font-black tracking-[0.2em] uppercase text-farm-s2">Special Offer</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black font-syne gu mb-1 italic tracking-tight">
+                  {settings.homepageDealTitle || (language === 'gu' ? 'પ્રથમ ઓર્ડર? 20% ઓફ!' : 'First Order? 20% OFF!')}
+                </h3>
+                <p className="text-sm text-white/70 mb-5 gu font-medium">
+                  {settings.homepageDealSub || (language === 'gu' ? 'પ્રોમો કોડ વાપરો અને બચત કરો' : 'Use promo code and save big')}
+                </p>
+                {settings.homepageDealCode && (
+                  <div className="flex items-center gap-3">
+                    <div className="inline-block bg-white/10 backdrop-blur-md border-2 border-dashed border-farm-s2 text-farm-s2 px-5 py-2.5 rounded-xl text-xl font-black tracking-[0.2em] font-syne shadow-inner">
+                      {settings.homepageDealCode}
+                    </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyCode(settings.homepageDealCode!);
+                      }}
+                      className="text-[10px] bg-farm-s1 text-farm-g1 px-3 py-1 rounded-full font-black uppercase tracking-widest shadow-sm hover:bg-farm-s2 transition-colors"
+                    >
+                      Copy Code
+                    </button>
+                  </div>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Search Bar */}
       <div className="relative max-w-lg mx-auto w-full px-2 sm:px-0">
         <div className="bg-white flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-farm-border shadow-sm group focus-within:border-farm-g3 transition-all">
@@ -307,28 +363,6 @@ export function Home({
           🍪 {t.namkeen}
         </button>
       </div>
-
-      {/* Promo Card */}
-      {settings?.showHomepageDeal !== false && (settings?.homepageDealCode || settings?.homepageDealTitle) && (
-        <div className="px-2 sm:px-0">
-          <div className="bg-gradient-to-tr from-farm-g1 to-farm-g2 rounded-[24px] p-6 text-white relative overflow-hidden group cursor-pointer border border-white/5">
-            <div className="absolute right-[-10px] top-[-10px] text-7xl opacity-10 group-hover:rotate-12 transition-transform duration-500">🎊</div>
-            <div className="relative z-10">
-                <h3 className="text-lg font-black font-syne gu mb-1">
-                  {settings.homepageDealTitle || (language === 'gu' ? 'પ્રથમ ઓર્ડર? 20% ઓફ!' : 'First Order? 20% OFF!')}
-                </h3>
-                <p className="text-xs text-white/60 mb-4 gu">
-                  {settings.homepageDealSub || (language === 'gu' ? 'પ્રોમો કોડ વાપરો અને બચત કરો' : 'Use promo code and save big')}
-                </p>
-                {settings.homepageDealCode && (
-                  <div className="inline-block bg-farm-s2/20 border-2 border-dashed border-farm-s2 text-farm-s2 px-5 py-2 rounded-xl text-lg font-black tracking-[0.2em] font-syne">
-                    {settings.homepageDealCode}
-                  </div>
-                )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Vegetable Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-2 sm:px-0">

@@ -156,18 +156,29 @@ export default function App() {
         const settingsSnap = await getDoc(settingsRef);
         
         if (settingsSnap.exists()) {
-          const settingsData = settingsSnap.data();
+          const data = settingsSnap.data();
           setSettings({
-            freeDeliveryDistance: settingsData.free_delivery_distance || settingsData.freeDeliveryDistance || 0,
-            freeDeliveryThreshold: settingsData.free_delivery_threshold || settingsData.freeDeliveryThreshold || 0,
-            deliveryCharge: settingsData.delivery_charge || settingsData.deliveryCharge || 0,
-            whatsappNumber: settingsData.whatsapp_number || settingsData.whatsappNumber,
-            isShopOpen: settingsData.is_shop_open ?? settingsData.isShopOpen ?? true,
-            warehouseAddress: settingsData.warehouse_address || settingsData.warehouseAddress,
-            warehouseLat: settingsData.warehouse_lat || settingsData.warehouseLat,
-            warehouseLng: settingsData.warehouse_lng || settingsData.warehouseLng,
-            deliverySlots: settingsData.delivery_slots || settingsData.deliverySlots || [],
-            updatedAt: settingsData.updated_at || settingsData.updatedAt
+            freeDeliveryDistance: data.free_delivery_distance || data.freeDeliveryDistance || 0,
+            freeDeliveryThreshold: data.free_delivery_threshold || data.freeDeliveryThreshold || 0,
+            deliveryCharge: data.delivery_charge || data.deliveryCharge || 0,
+            whatsappNumber: data.whatsapp_number || data.whatsappNumber || '',
+            isShopOpen: data.is_shop_open ?? data.isShopOpen ?? true,
+            warehouseAddress: data.warehouse_address || data.warehouseAddress || '',
+            warehouseLat: data.warehouse_lat || data.warehouseLat || 23.0225,
+            warehouseLng: data.warehouse_lng || data.warehouseLng || 72.5714,
+            deliverySlots: data.delivery_slots || data.deliverySlots || [],
+            showHomepageDeal: data.show_homepage_deal ?? data.showHomepageDeal ?? true,
+            homepageDealTitle: data.homepage_deal_title || data.homepageDealTitle || '',
+            homepageDealSub: data.homepage_deal_sub || data.homepageDealSub || '',
+            homepageDealCode: data.homepage_deal_code || data.homepageDealCode || '',
+            freeItemThreshold: data.free_item_threshold || data.freeItemThreshold || 0,
+            freeItemName: data.free_item_name || data.freeItemName || '',
+            freeItemImage: data.free_item_image || data.freeItemImage || '',
+            freeItemWeight: data.free_item_weight || data.freeItemWeight || '',
+            freeItemDescription: data.free_item_description || data.freeItemDescription || '',
+            freeItemMRP: data.free_item_mrp || data.freeItemMRP || 0,
+            isFreeItemActive: data.is_free_item_active ?? data.isFreeItemActive ?? false,
+            updatedAt: data.updated_at?.toDate?.()?.toISOString() || data.updated_at || new Date().toISOString()
           } as AppSettings);
         } else {
           // Initialize default settings if they don't exist
@@ -220,13 +231,24 @@ export default function App() {
           freeDeliveryDistance: data.free_delivery_distance || data.freeDeliveryDistance || 0,
           freeDeliveryThreshold: data.free_delivery_threshold || data.freeDeliveryThreshold || 0,
           deliveryCharge: data.delivery_charge || data.deliveryCharge || 0,
-          whatsappNumber: data.whatsapp_number || data.whatsappNumber,
+          whatsappNumber: data.whatsapp_number || data.whatsappNumber || '',
           isShopOpen: data.is_shop_open ?? data.isShopOpen ?? true,
-          warehouseAddress: data.warehouse_address || data.warehouseAddress,
-          warehouseLat: data.warehouse_lat || data.warehouseLat,
-          warehouseLng: data.warehouse_lng || data.warehouseLng,
+          warehouseAddress: data.warehouse_address || data.warehouseAddress || '',
+          warehouseLat: data.warehouse_lat || data.warehouseLat || 23.0225,
+          warehouseLng: data.warehouse_lng || data.warehouseLng || 72.5714,
           deliverySlots: data.delivery_slots || data.deliverySlots || [],
-          updatedAt: data.updated_at || data.updatedAt
+          showHomepageDeal: data.show_homepage_deal ?? data.showHomepageDeal ?? true,
+          homepageDealTitle: data.homepage_deal_title || data.homepageDealTitle || '',
+          homepageDealSub: data.homepage_deal_sub || data.homepageDealSub || '',
+          homepageDealCode: data.homepage_deal_code || data.homepageDealCode || '',
+          freeItemThreshold: data.free_item_threshold || data.freeItemThreshold || 0,
+          freeItemName: data.free_item_name || data.freeItemName || '',
+          freeItemImage: data.free_item_image || data.freeItemImage || '',
+          freeItemWeight: data.free_item_weight || data.freeItemWeight || '',
+          freeItemDescription: data.free_item_description || data.freeItemDescription || '',
+          freeItemMRP: data.free_item_mrp || data.freeItemMRP || 0,
+          isFreeItemActive: data.is_free_item_active ?? data.isFreeItemActive ?? false,
+          updatedAt: data.updated_at?.toDate?.()?.toISOString() || data.updated_at || new Date().toISOString()
         } as AppSettings);
       }
     });
