@@ -1,15 +1,109 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
+import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize Firebase Admin
+let db: admin.firestore.Firestore;
+let auth: admin.auth.Auth;
+
+try {
+  const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+  let firebaseConfig: any;
+  
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    console.log("Read Firebase config for initialization");
+  } else {
+    console.warn("Firebase config not found at", configPath);
+  }
+
+  if (admin.apps.length === 0) {
+    const initOptions: admin.AppOptions = {};
+    if (firebaseConfig?.projectId) {
+      process.env.GOOGLE_CLOUD_PROJECT = firebaseConfig.projectId;
+      initOptions.projectId = firebaseConfig.projectId;
+    }
+    
+    admin.initializeApp(initOptions);
+    console.log(`Firebase Admin initialized${initOptions.projectId ? " for project: " + initOptions.projectId : ""}`);
+  }
+  
+  const app = admin.app();
+  db = firebaseConfig?.firestoreDatabaseId 
+    ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+    : getFirestore(app);
+  auth = getAuth(app);
+} catch (error) {
+  console.error("Error during Firebase Admin setup:", error);
+  // Last resort: basic initialization
+  if (admin.apps.length === 0) {
+    admin.initializeApp();
+  }
+  db = getFirestore();
+  auth = getAuth();
+}
 
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
 
   app.use(express.json());
+
+  // Middleware to check if user is admin
+  const verifyAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Unauthorized: Missing or malformed token" });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    try {
+      const decodedToken = await auth.verifyIdToken(idToken);
+      const uid = decodedToken.uid;
+      
+      const profileDoc = await db.collection("profiles").doc(uid).get();
+      const profileData = profileDoc.data();
+      
+      if (profileData && profileData.role === "admin") {
+        (req as any).adminUid = uid;
+        next();
+      } else {
+        res.status(403).json({ error: "Forbidden: Admin access required" });
+      }
+    } catch (error: any) {
+      console.error("Admin verification failed:", error.message);
+      res.status(401).json({ error: "Unauthorized: " + (error.message || "Invalid token") });
+    }
+  };
+
+  // API to update user password
+  app.post("/api/admin/update-user-password", verifyAdmin, async (req, res) => {
+    const { targetUid, newPassword } = req.body;
+    
+    if (!targetUid || !newPassword) {
+      return res.status(400).json({ error: "targetUid and newPassword are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    try {
+      await auth.updateUser(targetUid, { password: newPassword });
+      console.log(`Password updated for user ${targetUid}`);
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error: any) {
+      console.error("Error updating password:", error);
+      res.status(500).json({ error: error.message || "Failed to update password" });
+    }
+  });
 
   // API to resolve short Google Maps links
   app.post("/api/resolve-maps-link", async (req, res) => {

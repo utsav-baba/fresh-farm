@@ -150,6 +150,9 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
   const [orderDeleteConfirm, setOrderDeleteConfirm] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
   const [userFormData, setUserFormData] = useState<Partial<UserProfile>>({});
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
 
   const handleDeleteAllOrders = async () => {
     if (!orderDeleteConfirm) {
@@ -1120,6 +1123,12 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
     }
   };
 
+  const closeUserModal = () => {
+    setUserToEdit(null);
+    setIsChangingPassword(false);
+    setNewAdminPassword('');
+  };
+
   const handleUpdateUserProfile = async () => {
     if (!userToEdit) return;
     setLoading(true);
@@ -1137,12 +1146,46 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
       
       await updateDoc(userRef, updateData);
       setSuccess('વપરાશકર્તા વિગતો સફળતાપૂર્વક અપડેટ કરવામાં આવી!');
-      setUserToEdit(null);
+      closeUserModal();
     } catch (err: any) {
       console.error('Error updating user profile:', err);
       setError('વપરાશકર્તા વિગતો અપડેટ કરવામાં કંઈક ભૂલ થઈ.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangeUserPassword = async (targetUid: string) => {
+    if (!newAdminPassword || newAdminPassword.length < 6) {
+      setError('પાસવર્ડ ઓછામાં ઓછો 6 અક્ષરનો હોવો જોઈએ.');
+      return;
+    }
+
+    setPasswordChangeLoading(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('Could not get auth token');
+
+      const response = await fetch('/api/admin/update-user-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ targetUid, newPassword: newAdminPassword })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update password');
+
+      setSuccess('પાસવર્ડ સફળતાપૂર્વક બદલાઈ ગયો છે!');
+      setIsChangingPassword(false);
+      setNewAdminPassword('');
+    } catch (err: any) {
+      console.error('Error changing password:', err);
+      setError(err.message || 'પાસવર્ડ બદલવામાં ભૂલ થઈ.');
+    } finally {
+      setPasswordChangeLoading(false);
     }
   };
 
@@ -1986,7 +2029,7 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                     <h3 className="text-xl font-black text-slate-800 font-syne uppercase tracking-tight">વપરાશકર્તા વિગતો</h3>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: {userToEdit.uid}</p>
                   </div>
-                  <button onClick={() => setUserToEdit(null)} className="p-2 hover:bg-white rounded-xl transition-all shadow-sm">
+                  <button onClick={closeUserModal} className="p-2 hover:bg-white rounded-xl transition-all shadow-sm">
                     <X className="h-5 w-5 text-slate-400" />
                   </button>
                 </div>
@@ -2065,11 +2108,48 @@ export function AdminPanel({ profile, language, t }: { profile: UserProfile | nu
                       <p className="text-[8px] text-red-400 font-bold uppercase mt-1">* તમે તમારી પોતાની ભૂમિકા બદલી શકતા નથી</p>
                     )}
                   </div>
+
+                  <div className="pt-4 border-t border-dashed border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setIsChangingPassword(!isChangingPassword)}
+                      className="w-full py-2.5 px-4 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Shield className="h-3 w-3 text-farm-s2" />
+                      {isChangingPassword ? 'પાસવર્ડ બદલવાનું રદ કરો' : 'પાસવર્ડ બદલો (Change Password)'}
+                    </button>
+
+                    {isChangingPassword && (
+                      <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">નવો પાસવર્ડ (New Password)</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Min 6 characters"
+                              value={newAdminPassword}
+                              onChange={(e) => setNewAdminPassword(e.target.value)}
+                              className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-slate-900 transition-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleChangeUserPassword(userToEdit.uid)}
+                              disabled={passwordChangeLoading || !newAdminPassword || newAdminPassword.length < 6}
+                              className="px-6 py-3 bg-slate-900 text-farm-s2 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:grayscale transition-all shadow-lg shadow-slate-200"
+                            >
+                              {passwordChangeLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'બદલો'}
+                            </button>
+                          </div>
+                          <p className="text-[8px] text-slate-400 font-bold uppercase ml-1 italic">* આ બટન દબાવતા જ યુઝરનો પાસવર્ડ તરત જ બદલાઈ જશે.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
                   <button
-                    onClick={() => setUserToEdit(null)}
+                    onClick={closeUserModal}
                     className="flex-1 py-3 px-4 bg-white text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-200"
                   >
                     રદ કરો
