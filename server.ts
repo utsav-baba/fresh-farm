@@ -25,14 +25,23 @@ try {
   }
 
   if (admin.apps.length === 0) {
-    const initOptions: admin.AppOptions = {};
+    const initOptions: admin.AppOptions = {
+      credential: admin.credential.applicationDefault(),
+    };
     if (firebaseConfig?.projectId) {
       process.env.GOOGLE_CLOUD_PROJECT = firebaseConfig.projectId;
       initOptions.projectId = firebaseConfig.projectId;
     }
     
-    admin.initializeApp(initOptions);
-    console.log(`Firebase Admin initialized${initOptions.projectId ? " for project: " + initOptions.projectId : ""}`);
+    try {
+      admin.initializeApp(initOptions);
+      console.log(`Firebase Admin initialized successfully for project: ${initOptions.projectId}`);
+      // Test the credentials by trying to fetch something (won't throw if just initialized)
+    } catch (err) {
+      console.error("Critical error during initializeApp:", err);
+      // Fallback
+      admin.initializeApp({ projectId: firebaseConfig?.projectId });
+    }
   }
   
   const app = admin.app();
