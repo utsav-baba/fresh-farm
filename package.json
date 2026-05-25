@@ -9,9 +9,18 @@
     "start": "NODE_ENV=production node server.js",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "mobile:sync": "npm run build && npx cap sync",
+    "mobile:open-android": "npx cap open android",
+    "mobile:open-ios": "npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.3",
+    "@capacitor/cli": "^8.3.3",
+    "@capacitor/core": "^8.3.3",
+    "@capacitor/ios": "^8.3.3",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@google/genai": "^1.29.0",
     "@supabase/supabase-js": "^2.103.0",
     "@tailwindcss/vite": "^4.1.14",

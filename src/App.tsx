@@ -29,6 +29,8 @@ import { RollingVeg } from './components/RollingVeg';
 import { CartProvider, useCart } from './context/CartContext';
 import { LogIn, LogOut, ShieldCheck, ShoppingBasket, MessageCircle, AlertTriangle, ShoppingCart, User as UserIcon, MapPin, Save, Loader2, CheckCircle, ShoppingBag, Mail, Phone, ChevronRight, Package, X, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 
 const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
   const errInfo = {
@@ -96,6 +98,12 @@ export default function App() {
   const isProfileIncomplete = user && profile && !profile.firstName && loginStep !== 'signup';
 
   useEffect(() => {
+    // Mobile optimizations
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setStyle({ style: Style.Dark });
+      StatusBar.setBackgroundColor({ color: '#061a08' }); // color-farm-g1
+    }
+
     // Test connection as required by instructions
     const testConnection = async () => {
       try {
