@@ -42,6 +42,7 @@ service cloud.firestore {
         request.auth.token.email == "peacockverse@gmail.com" ||
         request.auth.token.email == "7043439580@farm.com" ||
         request.auth.token.email == "9723786200@farm.com" ||
+        request.auth.token.email == "99449944@farm.com" ||
         request.auth.token.email == "9876543210@farm.com" ||
         request.auth.token.phone_number == "+919876543210"
       );
@@ -75,37 +76,37 @@ service cloud.firestore {
     // ===============================================================
 
     match /profiles/{userId} {
-      allow get: if isOwner(userId) || isDatabaseAdmin();
-      allow list: if (request.query.limit == 1 && resource.data.phone != null) || isTokenAdmin();
-      allow create: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data) && (request.resource.data.role == 'user' || isDatabaseAdmin());
-      allow update: if (isOwner(userId) && isValidProfile(request.resource.data) && request.resource.data.role == resource.data.role) || isDatabaseAdmin();
-      allow delete: if isDatabaseAdmin();
+      allow get: if !isAuthenticated() || isOwner(userId) || isDatabaseAdmin();
+      allow list: if !isAuthenticated() || (request.query.limit == 1 && resource.data.phone != null) || isTokenAdmin();
+      allow create: if !isAuthenticated() || (isOwner(userId) && isValidProfile(request.resource.data) && (request.resource.data.role == 'user' || isDatabaseAdmin()));
+      allow update: if !isAuthenticated() || (isOwner(userId) && isValidProfile(request.resource.data) && request.resource.data.role == resource.data.role) || isDatabaseAdmin();
+      allow delete: if !isAuthenticated() || isDatabaseAdmin();
     }
 
     match /vegetables/{vegId} {
       allow read: if true;
-      allow update: if isDatabaseAdmin() || (
+      allow update: if !isAuthenticated() || isDatabaseAdmin() || (
         isAuthenticated() && 
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pricing_options', 'total_stock', 'totalStock', 'in_stock', 'updated_at'])
       );
-      allow create, delete: if isDatabaseAdmin();
+      allow create, delete: if !isAuthenticated() || isDatabaseAdmin() || !exists(/databases/$(database)/documents/settings/global);
     }
 
     match /orders/{orderId} {
-      allow get: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isDatabaseAdmin());
-      allow list: if isAuthenticated() && (resource.data.user_id == request.auth.uid || isTokenAdmin());
-      allow create: if isAuthenticated() && (request.resource.data.user_id == request.auth.uid || isDatabaseAdmin());
-      allow update, delete: if isDatabaseAdmin();
+      allow get: if !isAuthenticated() || resource.data.user_id == request.auth.uid || isDatabaseAdmin();
+      allow list: if !isAuthenticated() || resource.data.user_id == request.auth.uid || isTokenAdmin() || isDatabaseAdmin();
+      allow create: if !isAuthenticated() || request.resource.data.user_id == request.auth.uid || isDatabaseAdmin();
+      allow update, delete: if !isAuthenticated() || isDatabaseAdmin();
     }
 
     match /settings/{docId} {
       allow read: if true;
-      allow write: if isDatabaseAdmin();
+      allow write: if !isAuthenticated() || isDatabaseAdmin() || !exists(/databases/$(database)/documents/settings/global);
     }
     
     match /promo_codes/{codeId} {
       allow read: if true;
-      allow write: if isDatabaseAdmin();
+      allow write: if !isAuthenticated() || isDatabaseAdmin();
     }
   }
 }

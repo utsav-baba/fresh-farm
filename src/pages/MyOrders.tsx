@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { Order, UserProfile } from '../types';
 import { formatINR } from '../lib/utils';
@@ -13,6 +13,13 @@ export function MyOrders({ profile, language, t }: { profile: UserProfile | null
 
   useEffect(() => {
     if (!profile) return;
+
+    // Guard: If there is an active Firebase Auth user, wait for the profile to align with that user to avoid permissions race condition.
+    const currentUser = auth?.currentUser;
+    if (currentUser && profile.uid !== currentUser.uid) {
+      console.log('MyOrders: Profile UID differs from Firebase Auth user UID, waiting for sync...', { profileUid: profile.uid, authUid: currentUser.uid });
+      return;
+    }
 
     setLoading(true);
     const ordersRef = collection(db, 'orders');

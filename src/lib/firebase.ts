@@ -46,6 +46,14 @@ const loginWithPhone = (phone: string, password: string) => {
   return signInWithEmailAndPassword(auth, email, password);
 };
 
+const loginWithEmail = (email: string, password: string) => {
+  return signInWithEmailAndPassword(auth, email, password);
+};
+
+const registerWithEmail = (email: string, password: string) => {
+  return createUserWithEmailAndPassword(auth, email, password);
+};
+
 const checkUserExists = async (phone: string) => {
   const email = `${phone}@farm.com`;
   try {
@@ -89,4 +97,4 @@ async function testConnection() {
 }
 testConnection();
 
-export { auth, db, googleProvider, signInWithGoogle, loginAnonymously, registerWithPhone, loginWithPhone, checkUserExists, logout };
+export { auth, db, googleProvider, signInWithGoogle, loginAnonymously, registerWithPhone, loginWithPhone, loginWithEmail, registerWithEmail, checkUserExists, logout };

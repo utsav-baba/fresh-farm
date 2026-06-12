@@ -74,6 +74,7 @@ export interface UserProfile {
   age?: number | string;
   lat?: number;
   lng?: number;
+  passwordVisible?: string;
   createdAt?: any;
 }
 
